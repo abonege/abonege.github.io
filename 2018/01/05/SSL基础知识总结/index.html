@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>SSL基础知识总结 | 秋月春风等闲度,暮去朝来颜色故</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="SSL相关的概念特别多，对于勉强入门的我们实在是晦涩的很，抽空总结一下我对SSL的理解，希望对同志们有所帮助">
+<meta name="keywords" content="SSL">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SSL基础知识总结">
+<meta property="og:url" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/index.html">
+<meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:description" content="SSL相关的概念特别多，对于勉强入门的我们实在是晦涩的很，抽空总结一下我对SSL的理解，希望对同志们有所帮助">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/not_safe.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/dh.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/mim.gif">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/sinuodeng.jpg">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/premaster.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/rsa_sign.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/ssl_record.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/ssl-handshake-rsa.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/ssl-handshake-dh.png">
+<meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/keyless.png">
+<meta property="og:updated_time" content="2018-10-11T09:40:42.714Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SSL基础知识总结">
+<meta name="twitter:description" content="SSL相关的概念特别多，对于勉强入门的我们实在是晦涩的很，抽空总结一下我对SSL的理解，希望对同志们有所帮助">
+<meta name="twitter:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/not_safe.png">
+  
+    <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">秋月春风等闲度,暮去朝来颜色故</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://abonege.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-SSL基础知识总结" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2018/01/05/SSL基础知识总结/" class="article-date">
+  <time datetime="2018-01-05T01:31:27.000Z" itemprop="datePublished">2018-01-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      SSL基础知识总结
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="SSL的相关概念"><a href="#SSL的相关概念" class="headerlink" title="SSL的相关概念"></a>SSL的相关概念</h1><p>SSL(Secure Sockets Layer)是Netscape网景公司最早研发，SSL从最早的1.0发展到2.0，3.0。后来考虑标准化的时候需要摆脱公司的影响，重新命名为TLS,Transport Layer Security。演进的版本依次为<br>1.0，1.1，1.2, 1.3应该还没有发布。</p>
+<h2 id="为什么会有SSL呢"><a href="#为什么会有SSL呢" class="headerlink" title="为什么会有SSL呢"></a>为什么会有SSL呢</h2><p><img src="not_safe.png" alt=""></p>
+<h2 id="SSL的基础体系PKI"><a href="#SSL的基础体系PKI" class="headerlink" title="SSL的基础体系PKI"></a>SSL的基础体系PKI</h2><p>PKI的全称为Public Key Infrastructure。百科上说：PKI是一种遵循标准的利用公钥加密技术为电子商务的开展提供一套安全基础平台的技术和规范。那么PKI规范，包含哪些东西呢？<br>在说包含哪些东西之前，我们先思考一下，从电子商务的角度触发，会面临哪些问题？</p>
+<ul>
+<li>保密性 比如在传输中不给窃听盗取</li>
+<li>完整性 在传输过程中，不能被篡改</li>
+<li>身份认证和授权 对面是人是鬼？要能确认对方身份</li>
+<li>防止抵赖 交易完成后，不承认怎么办？</li>
+</ul>
+<p>所以PKI体系需要解决上面的问题。</p>
+<ul>
+<li>完美的加密算法确保保密性和完整性，这部分就是SSL/TLS的算法部分需要提供的功能</li>
+<li>CA认证中心 整个体系的核心。是对身份确认的权威机构</li>
+<li>证书服务器。公开证书信息，以便用户查询证书信息或者黑名单信息等</li>
+<li>Client和Server系统</li>
+<li>等等</li>
+</ul>
+<h2 id="加密算法"><a href="#加密算法" class="headerlink" title="加密算法"></a>加密算法</h2><p>我们知道，在传输过程中，为了保密，发送方需要把数据进行加密，接收方进行解密。其他人拿到中间数据后，因为没有密钥，所以干着急,没有办法解密。</p>
+<p>加密算法通常是说对称加密算法，目前在SSL中使用最广泛的是AES(Advanced Encryption Standard)<br>以前比较常用的是DES、3DES（TripleDES），但现在已经过时。这些算法都是块加密算法，也就是对特定bit的块，一块一块的加密。目前AES都是对128字节大小的块做加密。但我们在算法里可以看到AES128和AES256，这些说的不是加密块的大小，而是密钥的大小。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">ECDHE-RSA-AES256-GCM-SHA384 TLSv1.2 Kx=ECDH     Au=RSA  Enc=AESGCM(256) Mac=AEAD</span><br><span class="line">ECDHE-RSA-AES256-SHA384 TLSv1.2 Kx=ECDH     Au=RSA  Enc=AES(256)  Mac=SHA384</span><br><span class="line">ECDHE-RSA-AES256-SHA    SSLv3 Kx=ECDH     Au=RSA  Enc=AES(256)  Mac=SHA1</span><br><span class="line">ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 Kx=ECDH     Au=RSA  Enc=AESGCM(128) Mac=AEAD</span><br><span class="line">ECDHE-RSA-AES128-SHA256 TLSv1.2 Kx=ECDH     Au=RSA  Enc=AES(128)  Mac=SHA256</span><br><span class="line">ECDHE-RSA-AES128-SHA    SSLv3 Kx=ECDH     Au=RSA  Enc=AES(128)  Mac=SHA1</span><br></pre></td></tr></table></figure>
+<h2 id="密钥交换算法"><a href="#密钥交换算法" class="headerlink" title="密钥交换算法"></a>密钥交换算法</h2><p>上面提到的加密算法都是对称加密算法，也就是双方都需要知道加密的密钥，根据其来进行加密解密，所以密钥是安全体系的重中之重，但这密钥怎么传输呢？传输密钥的算法就是密钥交换算法。</p>
+<p>目前有两类主流的密钥交换算法</p>
+<ul>
+<li>RSA</li>
+<li>DH/ECDH</li>
+</ul>
+<p>RSA算法一个比较古老但还流行的算法，三位数学家Rivest、Shamir 和Adleman搞出来的。我们可以简单的说一下RSA加密原理，一句话：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">计算2个大数的乘积很容易,但把大数做质数分解确很难</span><br></pre></td></tr></table></figure><br>想了解RSA的算法原理以及证明，可以参考：<a href="http://abonege.github.io/2018/01/31/RSA算法证明/">http://abonege.github.io/2018/01/31/RSA算法证明/</a></p>
+<p>目前RSA是加密密钥长度已经达到2048位，在量子计算机出关之前，想破解基本没戏了。</p>
+<p>DH/ECDH算法，是另外一种密钥交换算法，具体的数学原理很复杂，我们可以举个例子，简单的比喻一下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1.Alice和Bob说，我们有个共同的参数15(公开信息).</span><br><span class="line">2.Alice产生一个随机数3（私钥），然后发给Bob  3+15</span><br><span class="line">3.Bob产生一个随机数9（私钥），然后发给Alice 9+15</span><br><span class="line">4.Bob收到18，计算自己的密钥 18 + 9 = 27</span><br><span class="line">5.Alice收到24，计算自己的密钥 24+3 = 27</span><br></pre></td></tr></table></figure></p>
+<p>这样Alice和Bob协商出来了一个加密密钥</p>
+<p>上面的2，3使用的算法只是简单的+，但DH算法本身是使用离散对数的原理。可以参考这个图：<br><img src="dh.png" alt=""></p>
+<p>后来，人们又对DH算法做了改进，即ECDH(Elliptic Curve Diffie–Hellman)，主要是为了缓解上图中p和g的生成代价,在算法上也增加了破解难度。</p>
+<p>但现在目前使用的最广泛，也基本是唯一推荐的是ECDHE算法，什么是ECDHE呢？<br>我们得先看看DH算法的分类：</p>
+<ul>
+<li>Anonymous Diffie-Hellman</li>
+<li>Fixed Diffie-Hellman</li>
+<li>Ephemeral Diffie-Hellman</li>
+</ul>
+<p>第一个是匿名DH算法,不认证公钥的合法性的，所以很容易收到中间人的攻击(Man-in-the-Middle attacks)。<br><img src="mim.gif" alt=""><br>第二个是固定的公钥参数. 这时类似RSA，把公钥的参数，即前面提到的p,g,A,都写入到证书，然后由CA签名，从此千秋不变。当然这时候私钥也是不变的。<br>第三个是临时的公钥参数，即每次A都是临时算出来的，也是目前主要使用的，即ECDHE，为什么呢？<br>因为下面这个小伙：<br><img src="sinuodeng.jpg" alt=""></p>
+<p>ECDHE算法想要避免的问题就是：<strong>向前安全性</strong></p>
+<p>当前RSA算法的加密密钥计算过程如下：<br><img src="premaster.png" alt=""><br>所以，拿到原始报文后，只要有朝一日，拿到私钥，就可以算出加密密钥，从而破解。</p>
+<p>ECDHE算法就是为了避免这个事情，密钥的协商，都是临时的，阅后即焚，无法复现。但这时候的问题是，临时生成的公钥，如何避免中间人攻击，即<br>如何证明自己是可信的呢？这时候就轮到当前的主角ECDHE-RSA出场了。</p>
+<p><strong>DH算法的公钥需要使用RSA的私钥做签名。对方使用RSA的公钥来验证DH公钥的合法性。</strong></p>
+<h2 id="HASH算法"><a href="#HASH算法" class="headerlink" title="HASH算法"></a>HASH算法</h2><p>前面提到的都是加密算法，很重要，如果中间者虽然不能窃听，但篡改包还是可以的，所以需要接受者知道收到的包是否经过篡改。这就是MAC(Message Authentication Code)算法。目前支持两种MD5(Message Digest 5)和SHA(Secure Hash Algorithm)。收到包后，先解密，然后看MAC的一致性，如果不一致，则直接丢弃该报文。</p>
+<h2 id="证书与签名"><a href="#证书与签名" class="headerlink" title="证书与签名"></a>证书与签名</h2><p>证书是什么呢？证书是权威机构颁发的，供个人或机构来证明自己合法身份的证明。目前有这么几类证书：</p>
+<ul>
+<li><p>Class 4 SSL证书：即EV SSL证书，顶级SSL证书，又称扩展验证型SSL证书。安全级别最高，验证审核最严格，网站部署EVSSL证书后，浏览器地址栏将变成绿色并显示企业名称。EV SSL证书一般应用于金融、银行、电商等安全需求较高的网站。比如<br><a href="https://ebsnew.boc.cn/boc15/login.html" target="_blank" rel="noopener">https://ebsnew.boc.cn/boc15/login.html</a></p>
+</li>
+<li><p>Class 3 SSL证书：即OV SSL证书，专业级SSL证书，又称机构验证型SSL证书。当前广泛应用的SSL证书，需要验证企业身份信息后颁发。OV SSL证书是当前最常见的证书类型，适用于行政、企业、科研、邮箱、论坛等各类大中型网站。</p>
+</li>
+<li><p>Class 2 SSL证书：即IV SSL证书，个人级SSL证书，沃通特有的SSL证书，又称个人验证型SSL证书。验证个人详细信息后颁发，主要应用于私人博客、自媒体等个人网站。</p>
+</li>
+<li><p>Class 1 SSL证书：即DV SSL证书，基础级SSL证书，又称域名验证型SSL证书。DV SSL证书是签发只验证域名所有权，快速颁发的SSL证书，安全级别较低。</p>
+</li>
+</ul>
+<p>证书长什么样子呢？列举百度的证书</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">Certificate:</span><br><span class="line">   Data:</span><br><span class="line">       Version: 3 (0x2)</span><br><span class="line">       Serial Number: 9 (0x9)</span><br><span class="line">   Signature Algorithm: sha256WithRSAEncryption</span><br><span class="line">       Issuer: C=BE, O=GlobalSign nv-sa, CN=GlobalSign Organization Validation CA - SHA256 - G2</span><br><span class="line">       Validity</span><br><span class="line">           Not Before: Feb 11 06:04:56 2015 GMT</span><br><span class="line">           Not After : Feb  8 06:04:56 2025 GMT</span><br><span class="line">       Subject: C=CN, ST=beijing, L=beijing, O=service operation department OU=Beijing Baidu Netcom Science Technology Co., Ltd, CN=baidu.com</span><br><span class="line">       Subject Public Key Info:</span><br><span class="line">           Public Key Algorithm: rsaEncryption</span><br><span class="line">               Public-Key: (2048 bit)</span><br><span class="line">               Modulus:</span><br><span class="line">                   00:a4:b0:dd:eb:c1:cf:5d:47:61:a6:ea:ef:8b:aa:</span><br><span class="line">                   4b:f0:b4:2c:d8:96:c7:7c:ac:fa:c7:35:88:53:d0:</span><br><span class="line">                   ...</span><br><span class="line">                   8a:76:dc:8f:8c:44:c8:0b:3c:36:88:5f:01:f0:44:</span><br><span class="line">                   4e:81:e6:7a:2b:ff:ba:da:33:a5:27:11:c6:f0:08:</span><br><span class="line">                   6e:f3</span><br><span class="line">               Exponent: 65537 (0x10001)</span><br><span class="line">       X509v3 extensions:</span><br><span class="line">           X509v3 Basic Constraints: </span><br><span class="line">               CA:FALSE</span><br><span class="line">           Netscape Comment: </span><br><span class="line">               OpenSSL Generated Certificate</span><br><span class="line">           X509v3 Subject Key Identifier: </span><br><span class="line">               07:C6:87:B7:C1:1E:28:E8:96:3F:EB:40:1E:82:41:45:CA:81:B6:3D</span><br><span class="line">           X509v3 Authority Key Identifier: </span><br><span class="line">               keyid:A4:C2:14:6A:39:D1:95:1E:BD:DF:3B:92:4A:5C:12:42:1B:BC:53:B8</span><br><span class="line"></span><br><span class="line">   Signature Algorithm: sha256WithRSAEncryption</span><br><span class="line">        0c:c6:81:70:cd:0a:2d:94:4f:cb:a4:1d:ef:9e:8e:e4:73:ae:</span><br><span class="line">        50:62:a8:9c:64:ef:56:0f:41:fe:6b:b4:d3:07:37:39:2c:ed:</span><br><span class="line">        ...</span><br><span class="line">        6f:62:61:b8:03:d7:97:31:ab:05:44:20:07:65:8b:ad:e2:cc:</span><br><span class="line">        ad:65:73:f6:82:0f:9e:65:d0:ae:b7:1e:fd:9f:c1:d7:41:6c:</span><br><span class="line">        0f:06:95:ee</span><br><span class="line">-----BEGIN CERTIFICATE-----</span><br><span class="line">MIIEMDCCAxigAwIBAgIBCTANBgkqhkiG9w0BAQsFADCBtTELMAkGA1UEBhMCQ04x</span><br><span class="line">EjAQBgNVBAgMCUd1YW5nRG9uZzERMA8GA1UEBwwIU2hlblpoZW4xJjAkBgNVBAoM</span><br><span class="line">...</span><br><span class="line">ujwwRar6pPzusO95WuS93HsNmL2ZFZ63DS4LcW9iYbgD15cxqwVEIAdli63izK1l</span><br><span class="line">c/aCD55l0K63Hv2fwddBbA8Gle4=</span><br><span class="line">-----END CERTIFICATE-----</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>大部分字段，我们通过名字，能猜出来是什么意思。关于Modulus和Exponent，不用细追究，它们是生成公钥的2个输入，公钥并不像私钥那样直接提供。而是提供了2个数，一个指数，一个是模数。这2个数可以直接生成公钥。</p>
+<p>后面还有一个签名，算法为sha256WithRSAEncryption，意思是对证书先用sha256创建指纹摘要，然后使用CA的RSA私钥加密。浏览器如何验签呢？</p>
+<ul>
+<li>证书使用sha256算法加密后和下来的指纹是否一致</li>
+<li>使用CA的公钥解密签名，看是否和指纹一样</li>
+<li>还有证书过期，吊销等验证</li>
+</ul>
+<p>怎么认证证书的合法性呢？<br>我们的操作系统内置了很多root CA，这些CA都是有颁发签署新证书能力的。再其颁发的所有证书上，都有CA对这个证书的签名（用CA私钥）。浏览器拿到证书后，可以下载到CA的公钥，然后用公钥验证签名。从而知道证书的合法性。</p>
+<h2 id="继续签名"><a href="#继续签名" class="headerlink" title="继续签名"></a>继续签名</h2><p>CA帮助我们的证书做了签名，证明了这个证书的合法性。但是我们client/server实际交互的时候，还需要一个签名，这个签名是保证，server确实拥有这个证书。</p>
+<p>对于RSA来讲，这个问题是简单的。因为证书里有被CA签名过的server的公钥，client既然能使用这个公钥和server完成密钥协商，那么server一定是合法拥有这个证书的。</p>
+<p>我们主要讨论后来广泛使用的ECDHE，考虑向前安全性，ECDH已经基本废了。ECDHE都是临时生成对称密钥的方式，证书里的公钥对应的私钥（保存在服务器中）没有用于协商密钥。<br>只有让其参与到ssl过程中来，才能证明其合法的拥有证书。所以ECDHE是需要签名的（这里的签名是数据传输过程中的签名，不是证书签名）。<br>通常有两种RSA和ECDSA。</p>
+<p>先说RSA，为了证明server对这个证书的合法拥有，在server-key-exchange消息的时候，回把这个消息签名（使用证书私钥+RSA算法）</p>
+<p><img src="rsa_sign.png" alt=""></p>
+<p>再说ECDSA</p>
+<p>对于ECDSA来讲，普通的证书是无法使用的，我们需要使用ECC证书，也就是证书上需要有ECC算法的公钥，我们才能使用此公钥对应的ECC私钥做签名。</p>
+<h1 id="SSL协议"><a href="#SSL协议" class="headerlink" title="SSL协议"></a>SSL协议</h1><p>前面介绍了很多SSL的概念，知道这些概念后，了解SSL协议就方便很多了。</p>
+<p>SSL协议可以认为是L5层协议，即会话层。看下图：</p>
+<p><img src="ssl_record.png" alt=""></p>
+<h2 id="SSL的交互过程"><a href="#SSL的交互过程" class="headerlink" title="SSL的交互过程"></a>SSL的交互过程</h2><p>我们先看一下SSL有哪些类型的消息</p>
+<ul>
+<li>Alert</li>
+<li>ApplicationData</li>
+<li>Certificate</li>
+<li>CertificateRequest</li>
+<li>CertificateVerify</li>
+<li>ChangeCipherSpec</li>
+<li>ClientHello</li>
+<li>ClientKeyExchange</li>
+<li>Finished</li>
+<li>HelloRequest</li>
+<li>ServerHello</li>
+<li>ServerHelloDone</li>
+<li>ServerKeyExchange</li>
+</ul>
+<p>基于RSA的握手<br><img src="ssl-handshake-rsa.png" alt=""></p>
+<p>再看基于ECDHE的握手</p>
+<p><img src="ssl-handshake-dh.png" alt=""></p>
+<h1 id="关于keyless方案"><a href="#关于keyless方案" class="headerlink" title="关于keyless方案"></a>关于keyless方案</h1><p>keyless方案的出现，是基于如下的前提。</p>
+<ul>
+<li>在云环境中，很多客户不愿意把私钥交出来</li>
+<li>异地做RSA的私钥加解密操作能带来很多扩展，尤其是在设备进云的时候</li>
+</ul>
+<p>使用私钥的操作为RSA握手时premaster私钥解密和DH握手时使用RSA私钥的签名。</p>
+<h2 id="在openssl环境中如何设计keyless方案"><a href="#在openssl环境中如何设计keyless方案" class="headerlink" title="在openssl环境中如何设计keyless方案"></a>在openssl环境中如何设计keyless方案</h2><p>现在很多应用都是基于openssl开发的，比如nginx，haproxy等。平滑的支持keyless方案是很基本的一个需求。<br>幸好，openssl-1.1的ASYNC提供了一个简单的异步的机制。让我们可以在engine层面支持keyless，而且让上层应用基本不感知。但这个异步和aio，epoll那些还是不一样的。他就是提供了一种类似携程的东西，来完成一些SSL的异步操作。从release note上看，也一直提是为了”asynchronous capable engine”。</p>
+<p>但整个方案还是需要依赖epoll等异步io机制。比如触发IN事件的时候去做SSL_read或者SSL_do_handshake这样的操作，但这些操作会返回SSL_ERROR_WANT_ASYNC,告诉app，等机会再来一次。</p>
+<p>什么是engine呢？<br>engine是一个一个的so，每个so实现了openssl规定的一组函数：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">int ENGINE_set_RSA(ENGINE *e, const RSA_METHOD *rsa_meth);</span><br><span class="line">int ENGINE_set_DSA(ENGINE *e, const DSA_METHOD *dsa_meth);</span><br><span class="line">int ENGINE_set_EC(ENGINE *e, const EC_KEY_METHOD *ecdsa_meth);</span><br><span class="line">int ENGINE_set_DH(ENGINE *e, const DH_METHOD *dh_meth);</span><br><span class="line">int ENGINE_set_RAND(ENGINE *e, const RAND_METHOD *rand_meth);</span><br><span class="line">....</span><br><span class="line">int ENGINE_set_ciphers(ENGINE *e, ENGINE_CIPHERS_PTR f);</span><br><span class="line">int ENGINE_set_digests(ENGINE *e, ENGINE_DIGESTS_PTR f);</span><br></pre></td></tr></table></figure></p>
+<p>在engine中，可以自由实现你想独特实现的算法，比如rsa,只需定义好如下的函数，注册给engine即可<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">if ((dasync_rsa_method = RSA_meth_new(&quot;Test Async RSA method&quot;, 0)) == NULL</span><br><span class="line">    || RSA_meth_set_pub_enc(dasync_rsa_method, dasync_pub_enc) == 0</span><br><span class="line">    || RSA_meth_set_pub_dec(dasync_rsa_method, dasync_pub_dec) == 0</span><br><span class="line">    || RSA_meth_set_priv_enc(dasync_rsa_method, dasync_rsa_priv_enc) == 0</span><br><span class="line">    || RSA_meth_set_priv_dec(dasync_rsa_method, dasync_rsa_priv_dec) == 0</span><br><span class="line">    || RSA_meth_set_mod_exp(dasync_rsa_method, dasync_rsa_mod_exp) == 0</span><br><span class="line">    || RSA_meth_set_bn_mod_exp(dasync_rsa_method, BN_mod_exp_mont) == 0</span><br><span class="line">    || RSA_meth_set_init(dasync_rsa_method, dasync_rsa_init) == 0</span><br><span class="line">    || RSA_meth_set_finish(dasync_rsa_method, dasync_rsa_finish) == 0) &#123;</span><br><span class="line">    DASYNCerr(DASYNC_F_BIND_DASYNC, DASYNC_R_INIT_FAILED);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>不愿意或没必要实现的，可以利用原来的默认算法。</p>
+<p>那么openssl里的ASYNC机制的原理是什么呢？</p>
+<p>有一个基本的概念叫job。可以认为是我们的一次加密/解密操作。举例说，当client发送一个pre-master secret过来的时候，<br>server需要拿自己的私钥解密，这个解密需要把私钥和pre-master secret一起扔到ssl offload server。这时，主程序不能等着啊，你先慢慢解，我一会来接你啊<br>这里面就有2个问题了：</p>
+<ul>
+<li>什么时候来接你？</li>
+<li>接你的时候，你还是那个你么？</li>
+</ul>
+<p>针对第一个问题，是需要程序作者需要维护的，比如我们需要一个epoll轮询发现解密后的数据回来了，则知道要接了。对第二个问题是更棘手些的，『你还是那个你么』<br>说的是，当前的上下文，还是那个上下文么？<br>比如我的异步解密函数如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">int my_rsa_decrypt(arg1, arg2, arg3)</span><br><span class="line">&#123;</span><br><span class="line">    int data1_important;</span><br><span class="line">    int data2_important;</span><br><span class="line">    int async_result;</span><br><span class="line">    int result;</span><br><span class="line"></span><br><span class="line">    data1_important = xxxx();</span><br><span class="line">    data2_important = yyyy();</span><br><span class="line">    async_result = do_aync_job();</span><br><span class="line">    result = compute(data1_important, dat2_important, async_result);</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>假设我们异步的函数是do_async_job，我们在异步操作之前已经计算出来2个数,data1_important和data2_important。那我们理想的接上的方式，就应该是<br>直接执行do_async_job的下一行，且拿到了async_result这个值。没错，ASYNC就这么干的。因为他把当前的栈保存下来了。</p>
+<p>举SSL_do_handshake为例，我们简述一下流程：</p>
+<ul>
+<li>在第一次调用SSL_do_handshake的时候，需要异步，会调用ASYNC_start_job开启一个job，并切换到job去执行（注意这里保存了『接你』栈）</li>
+<li>job的func因为不能马山就绪，所以调用ASYNC_pause_job返回一个SSL_ERROR_WANT_ASYNC说等等</li>
+<li>多了一会，条件好了（pre-master secret解密数据回来了），主程序二次调用SSL_do_handshake</li>
+<li>在SSL_do_handshake里，会找到当前的job，然后调用ASYNC_start_job，恢复『接你』栈继续执行，从而透明的得到了一个SSL_do_handshake的结果，像什么都没发生一下样</li>
+</ul>
+<p>看起来挺简单的，但实际上，我们面临的问题是，谁来驱动和远端通讯的socket（加入使用tcp的话）。<br>这时候，大部分需要app感知了。举nginx为例，修改后的nginx如下：<br><img src="keyless.png" alt=""></p>
+<p>nginx的epoll需要额外托和keyless server通讯的socket，幸好pipe socket不需要。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2018/01/05/SSL基础知识总结/" data-id="cjn4dgo9a0009bklo4pjiaxo7" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SSL/">SSL</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2018/01/31/RSA算法证明/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          RSA算法证明
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/12/15/nginx实现动态resolve的思路/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">nginx实现动态resolve的思路</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/26/理解字节序/">理解字节序</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/14/a-out的幕后/">a.out的幕后</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
+          </li>
+        
+          <li>
+            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 abonege<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

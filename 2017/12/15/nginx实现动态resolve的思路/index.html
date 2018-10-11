@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>nginx实现动态resolve的思路 | 秋月春风等闲度,暮去朝来颜色故</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="nginx作为一个负载均衡产品，可以支持域名/upstream回源，如果域名指向的IP经常变化，或者根据运营商不同而动态不同，那么怎么能让nginx支持动态的域名解析呢">
+<meta name="keywords" content="nginx,upstream,resolve">
+<meta property="og:type" content="article">
+<meta property="og:title" content="nginx实现动态resolve的思路">
+<meta property="og:url" content="http://abonege.github.io/2017/12/15/nginx实现动态resolve的思路/index.html">
+<meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:description" content="nginx作为一个负载均衡产品，可以支持域名/upstream回源，如果域名指向的IP经常变化，或者根据运营商不同而动态不同，那么怎么能让nginx支持动态的域名解析呢">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2018-10-11T09:12:42.337Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="nginx实现动态resolve的思路">
+<meta name="twitter:description" content="nginx作为一个负载均衡产品，可以支持域名/upstream回源，如果域名指向的IP经常变化，或者根据运营商不同而动态不同，那么怎么能让nginx支持动态的域名解析呢">
+  
+    <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">秋月春风等闲度,暮去朝来颜色故</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://abonege.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-nginx实现动态resolve的思路" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/12/15/nginx实现动态resolve的思路/" class="article-date">
+  <time datetime="2017-12-15T05:38:33.000Z" itemprop="datePublished">2017-12-15</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      nginx实现动态resolve的思路
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="1-摘要"><a href="#1-摘要" class="headerlink" title="1.摘要"></a>1.摘要</h2><p>在nginx用作负载均衡的时候，通常配置的源站都是一个或若干个IP+端口号，但在有些需求的情况下，我们需要回源到一个域名instead of一组ip，比如有如下的需求：</p>
+<ul>
+<li>一个域名对应的IP列表是变化的</li>
+<li>nginx部署在不同的运营商后面，解析出来的IP可能是不一样的 </li>
+</ul>
+<p>一个简单的upstream可能如下</p>
+<pre>
+    upstream server_group {
+        server mysite.com;
+    }
+</pre>
+
+<p>我们想支持前面提到的需求，怎么办呢？在nginx的商业版中，配置是这样的：</p>
+<pre>
+    upstream server_group{
+        server mysite.com resolve;
+    }
+</pre>
+
+<p>这样就可以动态的解析mysite.com了。<br>我没有商业版的代码，表面上能满足我们动态解析的需求，但在有些情况下，上面的配置就显得捉襟见肘了。</p>
+<p>我们可以先理一下，当upstream的server列表发生变化，哪些模块会受影响呢？这是和我们使用了哪些模块有关系的，在我的场景下，有如下模块收到了影响</p>
+<ul>
+<li>负载均衡模块</li>
+<li>健康检查模块</li>
+</ul>
+<p>负载均衡模块需要感知变化，是因为需要在这些server负载均衡，多了少了server那得知道<br>健康检查模块也一样的，upstream的server列表指定了需要对哪些server做检查</p>
+<p>因为通常来讲，这两个模块是需要感知upstream成员变化的。那么我们到底该如何改动源站域名的动态解析呢？</p>
+<h2 id="2-实现思路"><a href="#2-实现思路" class="headerlink" title="2.实现思路"></a>2.实现思路</h2><p>我们可以先理一下，nginx现状是什么样呢？nginx本身是支持配置域名回源的，正如前面的配置。但这个配置是一次性判定的，加载配置的时候就定下来了，后期无法改变。<br>如果你的源站一直没有变化，其实这样的配置也是足够的。</p>
+<p>但我们关注的是源站可以变化的这种case，要么随着时间变化，要么随着部署环境变化（部署在移动/联通/电信的IDC里）。</p>
+<h3 id="2-1-upstream模块的实现"><a href="#2-1-upstream模块的实现" class="headerlink" title="2.1.upstream模块的实现"></a>2.1.upstream模块的实现</h3><p>在做一切之前，我们需要了解upstream模块是怎么实现的，以及upstream是如何和proxy_pass协作的，一个简单的协作配置可以为如下</p>
+<pre>
+    upstream server_group {
+        server mysite.com;
+    }
+
+    server {
+        listen       80;
+        server_name  abonege.com;
+
+        location / {
+
+            proxy_pass http://server_group/;
+        }
+</pre>
+
+
+<p>然后proxy模块会去找名字为server_group的upstream去回源，然后从server_group里指定的server列表里选择一个回源。<br>但我们需要注意到，把proxy_pass后面的东西换成合法的域名也可以work的。</p>
+<pre>
+    upstream server_group {
+        server mysite.com;
+    }
+
+    server {
+        listen       80;
+        server_name  abonege.com;
+
+        location / {
+
+            proxy_pass http://www.baidu.com/;
+        }
+</pre>
+
+<p>那么问题来了，nginx是如何知道这是一个合法的域名还是应该从upstream里找呢？<br>看了一下代码思路是这样的：<br>首先，解析到proxy_pass的时候，不管是域名还是upstream的名字，直接当成upstream，放到upstream模块的upstream数组里,</p>
+<pre>
+    u.url.len = url->len - add;
+    u.url.data = url->data + add;
+    u.default_port = port;
+    u.uri_part = 1;
+    u.no_resolve = 1;  // 不用resolve
+    plcf->upstream.upstream = ngx_http_upstream_add(cf, &u, 0);
+</pre>
+
+<p>当然，parse一个upstream block的时候，也会调用相同的函数，来添加一个upstream</p>
+<pre>
+    u.host = value[1];
+    u.no_resolve = 1;  //不用resolve
+    u.no_port = 1;
+
+    uscf = ngx_http_upstream_add(cf, &u, NGX_HTTP_UPSTREAM_CREATE
+                                         |NGX_HTTP_UPSTREAM_WEIGHT
+                                         |NGX_HTTP_UPSTREAM_MAX_FAILS
+                                         |NGX_HTTP_UPSTREAM_FAIL_TIMEOUT
+                                         |NGX_HTTP_UPSTREAM_DOWN
+                                         |NGX_HTTP_UPSTREAM_BACKUP);
+
+</pre>
+
+<p>在ngx_http_upstream_add里有一些合并的逻辑，因为有可能先解析upstream{}这样的block，也可能先解析到proxy_pass里的upstream名字（这种情况只建了一个upstream的空壳），总之能merge起来。<br>那么回到之前的话题，我们如何区分proxy_pass里指定的是域名还是upstream的名字呢？<br>其实这发生在upstream初始化的时候</p>
+<pre>
+    (gdb) bt
+    #0  ngx_inet_resolve_host (pool=0x6c0130, u=u@entry=0x7fffffffd9d0) at src/core/ngx_inet.c:1097
+    #1  0x000000000044aacf in ngx_http_upstream_init_round_robin (cf=0x7fffffffe0a0, us=0x6dcbc0)
+        at src/http/ngx_http_upstream_round_robin.c:189
+    #2  0x0000000000444494 in ngx_http_upstream_init_main_conf (cf=0x7fffffffe0a0, conf=0x6c2bf0) at src/http/ngx_http_upstream.c:6103
+    #3  0x000000000042e99f in ngx_http_block (cf=0x7fffffffe0a0, cmd=<optimized out="">, conf=<optimized out="">)    at src/http/ngx_http.c:262
+    #4  0x000000000041c914 in ngx_conf_handler (last=1, cf=0x7fffffffe0a0) at src/core/ngx_conf_file.c:427
+    #5  ngx_conf_parse (cf=cf@entry=0x7fffffffe0a0,    filename=filename@entry=0x6c0348) at src/core/ngx_conf_file.c:283
+    #6  0x000000000041a38a in ngx_init_cycle (old_cycle=old_cycle@entry=0x7fffffffe150) at src/core/ngx_cycle.c:274
+    #7  0x000000000040bcce in main (argc=<optimized out="">, argv=<optimized out="">) at src/core/nginx.c:276
+</optimized></optimized></optimized></optimized></pre>
+
+<p>ngx_inet_resolve_host就是我们要找的地方了。如果ngx_http_upstream_srv_conf_t里挂了server列表（例如upstream server_group），则走一个分支，如果是没有挂server列表的<br>则有可能是域名回源，然后对其进行域名解析，如果这种情况还是解析不了的，说明是瞎编的一个名字，既不是域名也不是upstream名字，则在启动的时候会报错，说host not found之类的。<br>总结一下：先看这个名字是不是upstream的名字，如果不是则尝试当成一个域名解析，成功则以，不成功则报错。</p>
+<p>好啦，我们继续下一个问题，前面提到的mysite.com是什么时候解析的呢？因为我们想实现动态解析，必须知道当前是怎么解析的。<br>继续看ngx_http_upstream_init_round_robin<br>悲喜交加的是，你会发现，不知道什么时候，mysite.com已经被解析好躺在server的怀抱里了</p>
+<pre>
+    for (i = 0; i < us->servers->nelts; i++) {
+        if (server[i].backup) {
+            continue;
+        }
+
+        for (j = 0; j < server[i].naddrs; j++) {
+            peer[n].sockaddr = server[i].addrs[j].sockaddr;
+            peer[n].socklen = server[i].addrs[j].socklen;
+            peer[n].name = server[i].addrs[j].name;
+            peer[n].weight = server[i].weight;
+            peer[n].effective_weight = server[i].weight;
+            peer[n].current_weight = 0;
+            peer[n].max_fails = server[i].max_fails;
+            peer[n].fail_timeout = server[i].fail_timeout;
+            peer[n].down = server[i].down;
+            peer[n].server = server[i].name;
+</pre>
+
+<p>那么，server[i].addrs到底是啥时候解析出来的呢？在加载配置文件的时候</p>
+<pre>
+    gdb) bt
+    #0  ngx_inet_resolve_host (pool=pool@entry=0x6c0130, u=u@entry=0x7fffffffd550) at src/core/ngx_inet.c:1120
+    #1  0x0000000000413572 in ngx_parse_inet_url (u=0x7fffffffd550, pool=0x6c0130) at src/core/ngx_inet.c:787
+    #2  ngx_parse_url (pool=0x6c0130, u=u@entry=0x7fffffffd550) at src/core/ngx_inet.c:545
+    #3  0x0000000000444302 in ngx_http_upstream_server (cf=0x7fffffffe0a0, cmd=<optimized out="">, conf=0x6d26b0)
+        at src/http/ngx_http_upstream.c:5631
+    #4  0x000000000041c914 in ngx_conf_handler (last=0, cf=0x7fffffffe0a0) at src/core/ngx_conf_file.c:427
+</optimized></pre>
+
+<p>所以，综上，我们认为在加载完毕配置文件的时候，想要的东西都好了。比如proxy和upstream的关联，upstream内部server名字的解析。但这一切都发生在解析文件的时候，<br>也就是一锤子打死的配置，不能变化，但我们要的就是变化，该当如何呢？</p>
+<h2 id="2-2-我们的方案"><a href="#2-2-我们的方案" class="headerlink" title="2.2.我们的方案"></a>2.2.我们的方案</h2><p>我们注意到，在ngx_http_upstream_init_request里居然还有</p>
+<pre>
+    ngx_resolve_start...
+    ngx_http_upstream_resolve_handler...
+</pre>
+
+<p>这个逻辑是干啥用的么,看起来很像运行太解析的，对不对？难道nginx自动支持动态DNS解析么，想多了。那个商业版才有的。是这样的，因为proxy_pass传递的参数里，是可以以变量形式配置的</p>
+<pre>
+    proxy_pass http://$dest_hostname/;
+</pre>
+
+<p>如果$dst_hostname是动态解析出来的,比如针对a请求$dest_hostname翻译成a.com，针对b请求翻译成b.com，辣么这个回源的域名就是动态变化的，就需要我们动态解析。</p>
+<p>有没有发现，已经在一定程度上解决我们的问题了。但前提是，我们不是用upstream回源，而是直接采用域名回源（nginx变量的形式）。<br>这样就能动态的翻译源站域名到不同的IP了。解决了我们的一部分问题，但还有别的问题，需要我们搞定，比如回话保持，健康检查都是配置在upstream里的。<br>如果我们不用upstream回源，相当于这部分功能无法使用了。那么应该怎么搞呢？</p>
+<p>举tengine的dyups模块为例，他的工作原理大致如下，当一个nginx worker进程收到一个创建upstream的API后，会验证upstream的配置语法，然后通过share memory传递给其他的<br>worker。然后各个worker会把这个upstream同步给自己的内存，注意，这时候会调用健康检查的添加peer的逻辑，以及对应算法模块的初始化（rr,lc,haship等算法的初始化逻辑是不一样的）</p>
+<p>所以我们为了支持动态解析，动手的逻辑应该是这里。</p>
+<ul>
+<li>持久化dyups的原始配置信息，虽然每个worker进程知道upstream信息，但是从upstream信息反推配置是很困难的。因为每次域名解析的内容变动后，我们需要重新构造dyups的upstream配置block</li>
+<li>周期的检查dyups的所有upstream配置，然后进行dns解析，这里nginx已经提供了很友好的函数。</li>
+</ul>
+<p><pre><br>    ngx_resolve_start…<br>    ngx_http_upstream_resolve_handler…<br></pre></p>
+<ul>
+<li>如果发现dyups的server域名已经发生变化，则走dyups update流程，即删除旧的upstream，创建新的upstream</li>
+</ul>
+<p>其实说句实话，选一个worker是不好选择的，我的建议是有一个专门的controller进程，用于做这件事。</p>
+<p>以上。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/12/15/nginx实现动态resolve的思路/" data-id="cjn4dgo9o000pbklo1x0jsa8e" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/resolve/">resolve</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/upstream/">upstream</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2018/01/05/SSL基础知识总结/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          SSL基础知识总结
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/11/07/nginx上支持手工封禁请求的的思路/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">nginx上支持手工封禁请求的的思路</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/26/理解字节序/">理解字节序</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/14/a-out的幕后/">a.out的幕后</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
+          </li>
+        
+          <li>
+            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 abonege<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

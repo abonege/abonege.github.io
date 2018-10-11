@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>hyperscan使用 | 秋月春风等闲度,暮去朝来颜色故</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="hyperscan的概念，基础使用，以及高性能使用的建议">
+<meta name="keywords" content="hyperscan,intel,RegEx">
+<meta property="og:type" content="article">
+<meta property="og:title" content="hyperscan使用">
+<meta property="og:url" content="http://abonege.github.io/2017/11/06/hyperscan使用/index.html">
+<meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:description" content="hyperscan的概念，基础使用，以及高性能使用的建议">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2018-10-11T09:12:42.405Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="hyperscan使用">
+<meta name="twitter:description" content="hyperscan的概念，基础使用，以及高性能使用的建议">
+  
+    <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">秋月春风等闲度,暮去朝来颜色故</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://abonege.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-hyperscan使用" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/11/06/hyperscan使用/" class="article-date">
+  <time datetime="2017-11-06T08:08:43.000Z" itemprop="datePublished">2017-11-06</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      hyperscan使用
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="1-摘要"><a href="#1-摘要" class="headerlink" title="1.摘要"></a>1.摘要</h2><p>intel在2015年10月开源了其第一个hyperscan版本4.0。在其之前很多网络设备公司都自研或使用类似pcre之类的正则匹配工具。<br>也许是dpdk的光环太多，导致大家对hyperscan也趋之若鹜。而且从实际来看，hyperscan也确实表现不俗。<br>本文主要介绍一下hyperscan的一些概念，基础使用，以及在性能敏感的情况下的一些注意事项。</p>
+<h2 id="2-环境"><a href="#2-环境" class="headerlink" title="2.环境"></a>2.环境</h2><p>工欲善其事，必先利其器。但hyperscan这个器，也需要在特定的环境下，才能表现出你要的性能来。hyperscan的表现和平台以及cpu是紧密相关的。<br>在compile正则的时候，我们可以指定平台，比如haswell，Sandy Bridg。也可以指定CPU的指令集，比如AVX 2和AVX512等。<br>hyperscan可以充分利用如下的指令集。</p>
+<ul>
+<li>Intel Streaming SIMD Extensions 4.2 (SSE4.2)</li>
+<li>the POPCNT instruction</li>
+<li>Bit Manipulation Instructions (BMI, BMI2)</li>
+<li>Intel Advanced Vector Extensions 2 (Intel AVX2)</li>
+</ul>
+<p>我们可以通过如下的指令看看本机的指令<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"></span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/cpuinfo</span><br></pre></td></tr></table></figure>
+<p>关于软件也确实有一些要求：</p>
+<ul>
+<li>GCC, v4.8.1 or higher</li>
+<li>Clang, v3.4 or higher (with libstdc++ or libc++)</li>
+<li>Intel C++ Compiler v15 or higher</li>
+</ul>
+<p>编译的时候，需要一些依赖的lib</p>
+<table>
+<thead>
+<tr>
+<th>lib</th>
+<th>Version</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CMake</td>
+<td>&gt;=2.8.11</td>
+<td></td>
+</tr>
+<tr>
+<td>Ragel</td>
+<td>6.9</td>
+<td></td>
+</tr>
+<tr>
+<td>Python</td>
+<td>2.7</td>
+<td></td>
+</tr>
+<tr>
+<td>Boost</td>
+<td>&gt;=1.57</td>
+<td></td>
+</tr>
+<tr>
+<td>Pcap</td>
+<td>&gt;=0.8</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-编译正则表达式"><a href="#3-编译正则表达式" class="headerlink" title="3.编译正则表达式"></a>3.编译正则表达式</h2><p>为什么需要编译正则表达式呢？这也正好是多模匹配（我理解的）的一个特点了。多模匹配是说一个待匹配字符串和目标N个正则表达式匹配，得到匹配上的正则表达式，进行响应的处理。单模匹配自然是说一次只能判断是否和一个正则表达式匹配。如果想和多个正则表达式匹配，那就只能for循环了。</p>
+<p>hyperscan就是用于支持多个正则表达式匹配的，内部状态机超级复杂，但好处是，基本以O（n）甚至更少的的代价，查找出其匹配的正则表达式。</p>
+<p>把一组正则表达式编译好的二机制叫做pattern database。我们可以通过如下3个API，去执行编译操作：</p>
+<ul>
+<li>hs_compile(): 把一个正则表达式编译成一个pattern database</li>
+<li>hs_compile_multi(): 把一组正则表达式编译成一个pattern database.</li>
+<li>hs_compile_ext_multi(): 基本和2一样，但多了一些参数可以设置，基本用于帮助我们限制一些查匹配件，以至于更快结束匹配过程，我们后续介绍。</li>
+</ul>
+<p>当编译正则表达式的时候，我们需要决定，我们后续的匹配使用什么样的方式？hyperscan允许我们使用如下的三种方式：</p>
+<ul>
+<li>Stream模式：流模式匹配，即待匹配数据不是连续的一块，比如tcp stream，我们的正则可能匹配的数据是跨块的。</li>
+<li>Block模式：待匹配的数据很明确，就在这个块里。</li>
+<li>Vector模式：在Stream和Block之间的模式，数据在指定的一系列Block里。</li>
+</ul>
+<p>使用哪种模式，需要我们的权衡，单纯的从性能比较，BLock模式肯定最好，因为比Stream模式比较，少了对跨块的内部状态的跟踪。但Stream能很好的解决包分多Block来的情况。</p>
+<h3 id="3-1-支持什么样的正则？"><a href="#3-1-支持什么样的正则？" class="headerlink" title="3.1.支持什么样的正则？"></a>3.1.支持什么样的正则？</h3><p>hyperscan对正则的支持比PCRE要少，但对于我们大多数人来说是足够用了，我们可以简单的看一下：</p>
+<ul>
+<li>所有字符串字符以及字符转义的匹配</li>
+<li>字符类（charactor class） . (dot), [abc], 和 [^abc]，以及\s, \d, \w, \v,及其否定形式(\S, \D, \W, \V, and \H).</li>
+<li>量词形式?,*,+,{n}, {m,n}, {n,}</li>
+<li>多选模式  foo|bar</li>
+<li>锚 ^, $, \A, \Z 和 \z.</li>
+<li>选项 i，m，s，x等</li>
+</ul>
+<p>差不多够用了不是？不支持的我都不知道啥意思</p>
+<h3 id="3-2-关于匹配的语义Semantics"><a href="#3-2-关于匹配的语义Semantics" class="headerlink" title="3.2.关于匹配的语义Semantics"></a>3.2.关于匹配的语义Semantics</h3><p>语法是和PCRE相同的，但语义Semantics是标准正则表达式是不一样的。不一样的有这么几个地方</p>
+<ul>
+<li>多模匹配：hyperscan的匹配是一次匹配多个正则表达式,这和PCRE里的 表达式1|表达式2|表达式3 这样从左到右依次匹配是不一样的</li>
+<li>无序：由于是多模匹配，所以多个表达式是一起匹配的，没有明显顺序，虽然基本按照谁先到匹配边界谁先结束</li>
+<li>默认仅返回匹配的尾部offset：默认情况下，在返回的时候，仅仅知道匹配的end的offset，如果想知道begin offset。需要编译的时候设置flag，但会影响性能</li>
+<li>全量匹配：比如从fooxyzbarbar里匹配/foo.*bar/, 默认PCRE采用贪婪匹配方式，只会匹配fooxyzbarbar，但hyperscan会匹配fooxyzbar和fooxyzbarbar两个。</li>
+</ul>
+<p>在stream模式下，像PCRE语义那样支持最长匹配是不太可能的。还是举上面的例子，正则是 /foo.*bar/,如果数据分下面的3个block来：<br>block 1    | block 2 | block 3<br>fooxyzbar | baz |qbar</p>
+<p>Stream模式最多匹配到第一个block就结束了，因为block 2又不匹配，考虑到效率，hyperscan不会无限制的等待后面是否有个bar了。否则，如果第500个block里有个bar，该怎么搞呢？</p>
+<h3 id="3-3-SOM"><a href="#3-3-SOM" class="headerlink" title="3.3.SOM"></a>3.3.SOM</h3><p>SOM是Start of Match。表示哪里开始匹配，我们之前也介绍过，默认情况下hyperscan只记录end of Match，不记录Start of Match。如果非要记录SOM，我们可以<br>在编译的时候设置 HS_FLAG_SOM_LEFTMOST这个flag。但设置之后有如下的缺点：</p>
+<ul>
+<li>减少hyperscan支持的正则样式。可能在编译的时候出现『Pattern too large』这样的错误</li>
+<li>增加Stream模式的状态，很容易了解，多了记录内容了嘛</li>
+<li>性能问题</li>
+<li>和其他的一些flag不兼容。 比如HS_FLAG_SINGLEMATCH和 HS_FLAG_PREFILTER。</li>
+</ul>
+<p>此外，考虑性能问题，我们在使用SOM的时候，可以设置一个阈值，即start offset和end offset之间的差值，太长了还没到结尾的话，就重新来过，来减少过多的内部状态追踪</p>
+<h3 id="3-4-扩展参数"><a href="#3-4-扩展参数" class="headerlink" title="3.4.扩展参数"></a>3.4.扩展参数</h3><p>我们在hs_compile_ext_multi里提到的扩展参数，</p>
+<ul>
+<li>flags: flags标记</li>
+<li>min_offset: 用于标识最小匹配的offset</li>
+<li>max_offset: 用于标识最大匹配的offset</li>
+<li>min_length: 最小匹配多长</li>
+<li>edit_distance: Levenshtein距离参数，用于模糊匹配.</li>
+</ul>
+<p>比如还是正则表达式/foo.*bar/，如果指定min_offset是10，max_offset是15的话，foobar和foo0123456789bar就不会匹配，而foo0123bar和foo0123456bar就会匹配。</p>
+<p>如果edit_distance是2的话，foobar, fooba, fobr, fo_baz, foooobar和/foobar/都会匹配</p>
+<h2 id="4-匹配过程"><a href="#4-匹配过程" class="headerlink" title="4.匹配过程"></a>4.匹配过程</h2><p>hyperscan对于上面的3种模式，也提供了不同的scan函数,都是以hs_scan开头。<br>一旦一个正则匹配后，会回调下面的函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">typedef (* match_event_handler)(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context)</span><br></pre></td></tr></table></figure>
+<p>这个函数的返回非0的话停止匹配，否则继续匹配下去，直到找到满意的。<br>from参数就是前面提到的start of match，to就是end of match，</p>
+<h3 id="4-1-Stream模式"><a href="#4-1-Stream模式" class="headerlink" title="4.1.Stream模式"></a>4.1.Stream模式</h3><p>在stream模式里会调用如下几个函数</p>
+<ul>
+<li>hs_open_stream()</li>
+<li>hs_scan_stream()</li>
+<li>hs_close_stream()<br>匹配上正则后，会回调callback，callback函数如果返回非0，则终止此次匹配过程。虽然在callback里中止了，但实际上stream的状态机还是停留在一个一个状态。<br>后续如果继续调用hs_scan_stream，会立即返回HS_SCAN_TERMINATED。 最终还是需要调用者调用一个hs_close_stream，去释放资源。<br>再次强调一下，由于Stream需要记录跨块扫描的内部状态，所以会有一定的性能损耗。</li>
+</ul>
+<p>hyperscan也是从前往后的匹配，当遇到 $ \b等字符时，并不会在当前stream就发生回调，只有在收到下一个stream或者stream关闭的时候才能决定回调与否</p>
+<h4 id="4-1-1-Stream的管理"><a href="#4-1-1-Stream的管理" class="headerlink" title="4.1.1.Stream的管理"></a>4.1.1.Stream的管理</h4><p>除了前面提到的几个stream的操作函数，还有如下的API可是使用</p>
+<ul>
+<li>hs_reset_stream(): resets a stream to its initial state; this is equivalent to calling hs_close_stream() but will not free the memory used for stream state.</li>
+<li>hs_copy_stream(): constructs a (newly allocated) duplicate of a stream.</li>
+<li>hs_reset_and_copy_stream(): constructs a duplicate of a stream into another, resetting the destination stream first. This call avoids the allocation done by hs_copy_stream().</li>
+</ul>
+<p>此外stream还支持如何在stream的内容是压缩的情况下做scan操作</p>
+<ul>
+<li>hs_compress_stream()</li>
+<li>hs_expand_stream()</li>
+<li>hs_reset_and_expand_stream()</li>
+</ul>
+<h3 id="4-2-Block模式"><a href="#4-2-Block模式" class="headerlink" title="4.2.Block模式"></a>4.2.Block模式</h3><p>Block模式特别简单，调用hs_scan()即可。</p>
+<h3 id="4-3-Vector模式"><a href="#4-3-Vector模式" class="headerlink" title="4.3.Vector模式"></a>4.3.Vector模式</h3><p>使用API hs_scan_vector()从block数组做正则匹配，从调用者来看，从block list里scan和a)把这些block看成stream的若干写入或b）把这些block list通过memcpy拼写成一个大的block，匹配的效果是一样的。但还需要根据实际情况决定使用哪种模式</p>
+<h3 id="4-4-Scratch空间"><a href="#4-4-Scratch空间" class="headerlink" title="4.4.Scratch空间"></a>4.4.Scratch空间</h3><p>当做正则扫描的时候，需要一些额外的内存，来保存运行时内部数据。如果栈上申请又比较大，运行时临时申请又影响性能，所以需要我们提前申请的这些空间，我们叫<br>Scratch空间。</p>
+<p>我们使用 hs_alloc_scratch()来申请Scratch空间，指定pattern database即可，不需要我们知道具体空间大小。如果我们有多个database的话，虽然我们会对<br>每个database调用hs_alloc_scratch，但实际上只生成一个一份大小最合适的Scratch空间。</p>
+<ul>
+<li>如果是递归scan，比如在回调的时候再做另一次scan，这时需要2个Scratch空间</li>
+<li>没有递归的情况下，Scratch空间应是per-thread的</li>
+<li>如果是一写多读的话，我们推荐使用hs_clone_scratch() 来替代多次 hs_alloc_scratch() </li>
+</ul>
+<h3 id="4-5-关于自定义内存申请-释放函数"><a href="#4-5-关于自定义内存申请-释放函数" class="headerlink" title="4.5.关于自定义内存申请/释放函数"></a>4.5.关于自定义内存申请/释放函数</h3><p>默认情况下，我们都使用malloc/free作为内部申请函数，如果我们系统自己构造了自己的内存管理函数的话，把下面一些函数赋值成自己的函数即可：</p>
+<ul>
+<li>hs_set_database_allocator(), which sets the allocate and free functions used for compiled pattern databases.</li>
+<li>hs_set_scratch_allocator(), which sets the allocate and free functions used for scratch space.</li>
+<li>hs_set_stream_allocator(), which sets the allocate and free functions used for stream state in streaming mode.</li>
+<li>hs_set_misc_allocator(), which sets the allocate and free functions used for miscellaneous data, such as compile error structures and informational strings.</li>
+</ul>
+<h2 id="5-关于序列化"><a href="#5-关于序列化" class="headerlink" title="5.关于序列化"></a>5.关于序列化</h2><p>对于一些应用来说，确保scan操作之前，pattern database编译好了即可。但对于一些应用来说，也有其他的考量。比如：</p>
+<ul>
+<li>在其他主机上编译database（如果规则特别多，编译起来很慢的）</li>
+<li>把编译好的database持久化起来，仅在正则该表的时候才重新编译</li>
+<li>随时根据情况调整database的所在内存，比如从A地址迁移到B地址</li>
+</ul>
+<p>但database在内存的存储里不是顺次存放的，里边有指针引用来引用去，为了让database是可移植的，所以hyperscan提供了如下的函数：</p>
+<ul>
+<li>hs_serialize_database(): serializes a pattern database into a flat relocatable buffer of bytes.</li>
+<li>hs_deserialize_database(): reconstructs a newly allocated pattern database from the output of hs_serialize_database().</li>
+<li>hs_deserialize_database_at(): reconstructs a pattern database at a given memory location from the output of hs_serialize_database().</li>
+<li>hs_serialized_database_size(): given a serialized pattern database, returns the size of the memory block required by the database when deserialized.</li>
+<li>hs_serialized_database_info(): given a serialized pattern database, returns a string containing information about the database. This call is analogous to hs_database_info().</li>
+</ul>
+<h2 id="6-关于性能考虑"><a href="#6-关于性能考虑" class="headerlink" title="6.关于性能考虑"></a>6.关于性能考虑</h2><p>性能是我们使用hyperscan最最重要的原因，但不恰当的使用，会导致性能大打折扣。我们依次列举一下可能的影响性能的因素，大家共勉：</p>
+<h3 id="6-1-不要手工优化表达式"><a href="#6-1-不要手工优化表达式" class="headerlink" title="6.1.不要手工优化表达式"></a>6.1.不要手工优化表达式</h3><p>hyperscan比我们更懂正则表达式，比如不区分大小写匹配/abc/，如下几种写法都可以：</p>
+<ul>
+<li>/[Aa][Bb][Cc]/</li>
+<li>/(A|a)(B|b)(C|c)/</li>
+<li>/(?i)abc(?-i)/</li>
+<li>/abc/i</li>
+</ul>
+<h3 id="6-2-不必刻意优化对lib的使用"><a href="#6-2-不必刻意优化对lib的使用" class="headerlink" title="6.2.不必刻意优化对lib的使用"></a>6.2.不必刻意优化对lib的使用</h3><p>hyperscan能处理很多case，比如小包流，超大包等。除非确实遇到性能问题，否则就用最简单的方式使用hyperscan即可,即大道至简。比如我们知道block模式的匹配效果比stream的匹配效果好，但没有必要特意把一个stream上的所有数据收齐了后一起比较，除非包是一个字节一个字节收到的。<br>此外，hyperscan的性能随着正则表达式数量增加而性能逐渐下降，是平滑的，不想其他有些软件那样当到达一个阈值后陡降，这是hyperscan的一个优点<br>hyperscan的throughput也很大，对于3.0G频率的CPU来说，一个core在1us内能scan 3000-bit block 数据。但并不意味着22us能扫描完毕22*3000-bit block数据。<br>所以不要试图缓存数据来提升scan性能</p>
+<h3 id="6-3-如可能尽量使用block模式"><a href="#6-3-如可能尽量使用block模式" class="headerlink" title="6.3.如可能尽量使用block模式"></a>6.3.如可能尽量使用block模式</h3><p>block的性能表现要比stream好很多</p>
+<h3 id="6-4-pattern-database的拆解"><a href="#6-4-pattern-database的拆解" class="headerlink" title="6.4.pattern database的拆解"></a>6.4.pattern database的拆解</h3><p>如果我们需要统计5种不同的流量，最好建立5个pattern database，分别存放5种待待匹配特征，而不是把所有正则混在一个database里，除非这5种流量的绝大部分的待匹配的内容是一样的，比如第一种流量里有abc，第二种也有，以此类推，并且相同的程度到达90%。</p>
+<h3 id="6-5-scratch空间"><a href="#6-5-scratch空间" class="headerlink" title="6.5.scratch空间"></a>6.5.scratch空间</h3><ul>
+<li>提前申请好scratch空间，不要到匹配的时候申请，而是编译好database后马上申请。</li>
+<li>为每个context(一个线程)申请一个，不同的database可以复用一个scratch空间</li>
+</ul>
+<h3 id="6-7-多使用锚"><a href="#6-7-多使用锚" class="headerlink" title="6.7.多使用锚"></a>6.7.多使用锚</h3><ul>
+<li>如果明确从开始匹配则使用\A或^作为表达式的开头 比如\^abc\</li>
+<li>如果明确结尾可使用$, \z 和 \Z</li>
+<li>前面提到的min_offset和max_offset扩展参数，可以提前帮我们判定匹配结束</li>
+</ul>
+<h3 id="6-8-避免任意匹配"><a href="#6-8-避免任意匹配" class="headerlink" title="6.8.避免任意匹配"></a>6.8.避免任意匹配</h3><p>比如 /.<em>/这样的正则会导致我们进行最多次的匹配，比如abcd这样的字符，会返回5次回调(pcre因为采用贪婪匹配只会返回最后的一个)<br>另外一个就是待匹配正则的前面和后面不要有可选的部分，比如/x?abcd</em>/   前面的x?就是多余的，不影响匹配结果，后面的*也会导致我们匹配很多次<br>如果把这个正则改写成/abc/就会好很多，因为</p>
+<ul>
+<li>匹配/abc/的集合包含匹配/x?abcd*/，</li>
+<li>匹配次数明显减少，比如样本 0123abcdddd 匹配/abc/一次，但匹配/x?abcd*/高达5次。abc  abcd abcdd abcddd abcddd</li>
+</ul>
+<h3 id="6-9-在stream模式下避免使用高重复的方式"><a href="#6-9-在stream模式下避免使用高重复的方式" class="headerlink" title="6.9.在stream模式下避免使用高重复的方式"></a>6.9.在stream模式下避免使用高重复的方式</h3><p> /X.{1000,1001}abcd/ 高达1000多次的重复，会给性能带来很大的影响</p>
+<h3 id="6-10"><a href="#6-10" class="headerlink" title="6.10."></a>6.10.</h3><p>需要匹配的字符尽早出现，可变的部分或者正则发部分扔到后面去<br>/\wab\d<em>\w\w\w/ 比下面的好<br>/\w\w\d</em>\w\w/,<br>/\w(abc)?\d*\w\w\w/ </p>
+<p>隐式的一些声明也比没有字符好，比如/[0-2][3-5].<em>\w\w/ 也有效的包含了一些信息,注意，即使展开的很详细，比如/(03|04|05|13|14|15|23|24|25).</em>\w\w/也是没啥帮助的</p>
+<p>越长字符越有帮助，比如100个字符的表达式里有14字符比有4个字符性能会高出很大一截。</p>
+<h3 id="6-11-使用Dot-all"><a href="#6-11-使用Dot-all" class="headerlink" title="6.11.使用Dot all"></a>6.11.使用Dot all</h3><p>Dot all模式，是使用HS_FLAG_DOTALL 这个标志控制的，关闭的话的代价会比较大。 /A.<em>B/ 会变成 /A[^\n]</em>B/.也就是跨行匹配。我们在执行匹配的时候<br>如果能1行匹配一次，最好打开这个标志</p>
+<h3 id="6-12仅匹配一次"><a href="#6-12仅匹配一次" class="headerlink" title="6.12仅匹配一次"></a>6.12仅匹配一次</h3><p>前面提到过，hyperscan是多次匹配的，如果设计上确实只需要匹配一次就行了，比如有10条封禁规则，任何一条都可以封禁的话，那么该模式就需要启动。<br>可以通过(HS_FLAG_SINGLEMATCH)来开启这个模式</p>
+<h3 id="6-13-SOM"><a href="#6-13-SOM" class="headerlink" title="6.13.SOM"></a>6.13.SOM</h3><p>这个前面已经提到过，如果没有必要，需要关闭这个</p>
+<h3 id="6-14-模糊匹配"><a href="#6-14-模糊匹配" class="headerlink" title="6.14.模糊匹配"></a>6.14.模糊匹配</h3><p>这个也是明显降低行呢功能的，能不用尽量不用</p>
+<h2 id="7-一些测试数据"><a href="#7-一些测试数据" class="headerlink" title="7.一些测试数据"></a>7.一些测试数据</h2><p>我们做一点测试的对比，先不测正则，只测试子串查找，子串是16字节的数据，待匹配串是随机的64到96长度的串<br>测试多模匹配，子串个数分别测试1，8，16，测试算法是 strstr，ac，以及hyperscan,测试100w数据的匹配时间。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">算法</th>
+<th style="text-align:center">1个子串</th>
+<th style="text-align:center">8个子串</th>
+<th style="text-align:center">16个子串</th>
+<th style="text-align:right">64个子串</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">strstr</td>
+<td style="text-align:center">7.660327</td>
+<td style="text-align:center">48.659695</td>
+<td style="text-align:center">95.293705</td>
+<td style="text-align:right">358.87231</td>
+</tr>
+<tr>
+<td style="text-align:left">hyperscan</td>
+<td style="text-align:center">12.827749</td>
+<td style="text-align:center">20.445274</td>
+<td style="text-align:center">22.351201</td>
+<td style="text-align:right">22.909993</td>
+</tr>
+<tr>
+<td style="text-align:left">ac</td>
+<td style="text-align:center">101.493826</td>
+<td style="text-align:center">101.534645</td>
+<td style="text-align:center">101:596807</td>
+<td style="text-align:right">102:515976</td>
+</tr>
+</tbody>
+</table>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/11/06/hyperscan使用/" data-id="cjn4dgo9j000hbklokj8arpx2" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/intel/">intel</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2017/11/07/nginx上支持手工封禁请求的的思路/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          nginx上支持手工封禁请求的的思路
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/05/23/关于编译hyperscan/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">关于编译hyperscan</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/26/理解字节序/">理解字节序</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/14/a-out的幕后/">a.out的幕后</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
+          </li>
+        
+          <li>
+            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 abonege<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

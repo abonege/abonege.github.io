@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>nginx的配置管理 | 秋月春风等闲度,暮去朝来颜色故</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="为了支持模块化，nginx的配置管理，采用了及其复杂的方式，本文就和大家分享一下，nginx是怎么进程配置管理的。">
+<meta name="keywords" content="nginx">
+<meta property="og:type" content="article">
+<meta property="og:title" content="nginx的配置管理">
+<meta property="og:url" content="http://abonege.github.io/2017/05/10/nginx的配置管理/index.html">
+<meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:description" content="为了支持模块化，nginx的配置管理，采用了及其复杂的方式，本文就和大家分享一下，nginx是怎么进程配置管理的。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://abonege.github.io/2017/05/10/nginx的配置管理/nginx_conf.jpg">
+<meta property="og:updated_time" content="2018-10-11T09:12:42.336Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="nginx的配置管理">
+<meta name="twitter:description" content="为了支持模块化，nginx的配置管理，采用了及其复杂的方式，本文就和大家分享一下，nginx是怎么进程配置管理的。">
+<meta name="twitter:image" content="http://abonege.github.io/2017/05/10/nginx的配置管理/nginx_conf.jpg">
+  
+    <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">秋月春风等闲度,暮去朝来颜色故</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://abonege.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-nginx的配置管理" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/05/10/nginx的配置管理/" class="article-date">
+  <time datetime="2017-05-10T11:26:32.000Z" itemprop="datePublished">2017-05-10</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      nginx的配置管理
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="1-介绍"><a href="#1-介绍" class="headerlink" title="1.介绍"></a>1.介绍</h1><p>在介绍实现之前，我们先看一下，nginx的配置文件是如何管理的。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">user  nobody;</span><br><span class="line">daemon on;</span><br><span class="line">worker_processes  1;</span><br><span class="line">error_log  logs/debug.log  debug;</span><br><span class="line"></span><br><span class="line">pid        run/nginx.pid;</span><br><span class="line"></span><br><span class="line">#thread_pool default threads=64 max_queue=65536;</span><br><span class="line"></span><br><span class="line">events &#123;</span><br><span class="line">    use epoll;</span><br><span class="line">    worker_connections  1024;</span><br><span class="line">    multi_accept on;            #if on, accept as many connections as possible in one time</span><br><span class="line">    accept_mutex off;</span><br><span class="line">&#125;</span><br><span class="line">http &#123;</span><br><span class="line">    access_log  logs/access.log  main;</span><br><span class="line">    sendfile    on;</span><br><span class="line">    keepalive_timeout  65;</span><br><span class="line">    keepalive_requests 1000;</span><br><span class="line">    server &#123;</span><br><span class="line">        servername   www.test1.com</span><br><span class="line">        listen       80;</span><br><span class="line">        access_log  logs/host.access.log  main;</span><br><span class="line">        location / &#123;</span><br><span class="line">            root   html/test1;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    server &#123;</span><br><span class="line">        servername   www.test2.com</span><br><span class="line">        listen       443;</span><br><span class="line">        access_log  logs/host.access.log  main;</span><br><span class="line"></span><br><span class="line">        location / &#123;</span><br><span class="line">            root   html/test2;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>大致如上的样子，每一行都可以认为是一个command，有其参数。重要的是，每个指令有起生效范围。返回包含三类：</p>
+<ul>
+<li>NGX_HTTP_MAIN_CONF</li>
+<li>NGX_HTTP_SRV_CONF</li>
+<li>NGX_HTTP_LOC_CONF</li>
+</ul>
+<p>当我们写nginx插件的时候，会定义指令可以配置在哪个返回，举access_log为例：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#123; ngx_string(&quot;access_log&quot;),</span><br><span class="line">     NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF</span><br><span class="line">                       |NGX_HTTP_LMT_CONF|NGX_CONF_1MORE,</span><br><span class="line">     ngx_http_log_set_log,</span><br><span class="line">     NGX_HTTP_LOC_CONF_OFFSET,</span><br><span class="line">     0,</span><br><span class="line">     NULL &#125;</span><br></pre></td></tr></table></figure></p>
+<p>可以看出，这个指令即可以配置在main段可以server段也可以location段。而pid指令就只能配置在main段里<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&#123; ngx_string(&quot;pid&quot;),</span><br><span class="line">     NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_TAKE1,</span><br><span class="line">     ngx_conf_set_str_slot,</span><br><span class="line">     0,</span><br><span class="line">     offsetof(ngx_core_conf_t, pid),</span><br><span class="line">     NULL &#125;,</span><br></pre></td></tr></table></figure></p>
+<p>在介绍实现之前，我们先李一个基本的规则，方便理解：</p>
+<ul>
+<li>main的实例只有一个，即全局的</li>
+<li>server实例有很多个，存在于main内</li>
+<li>location的实例有很多个，存在一个server内</li>
+<li>每个模块在每个实例里都有自己的conf（当然在在那个实例里有其指令）</li>
+</ul>
+<p>好，后面就是我们的重点了，模块的配置到底是如何保存在各个实例中的（main实例，server实例，以及location实例）</p>
+<h1 id="2-配置的管理"><a href="#2-配置的管理" class="headerlink" title="2.配置的管理"></a>2.配置的管理</h1><h2 id="2-1-模块的分类"><a href="#2-1-模块的分类" class="headerlink" title="2.1. 模块的分类"></a>2.1. 模块的分类</h2><p>nginx的模块，大致分两类吧，也许有别的，但我不关心</p>
+<ul>
+<li>CORE模块</li>
+<li>HTTP模块</li>
+</ul>
+<p>core模块是最基础的模块，比如events模块,log模块，thread pool模块，http_core模块等，<br>HTTP模块是处理http时候使用的模块，我们增加的扩展大多属于这类模块。</p>
+<p>CORE模块是第一层级，HTTP模块是http_core模块的下一层。这和配置管理很有关系。</p>
+<h2 id="2-2-core模块的配置"><a href="#2-2-core模块的配置" class="headerlink" title="2.2. core模块的配置"></a>2.2. core模块的配置</h2><p>大家都知道nginx的配置，都保存在cycle-&gt;conf_ctx里，是一个void<em>**</em>类型，但为啥这么多层<em>，我现在仍不知情。<br>不过不影响我们看逻辑：他的第一层下标就是core模块的index，比如http_core模块的index是20，那么http_core模块对应的配置文件便是cycle-&gt;conf_ctx[20]，这样就脱调了一层</em>（我没看到哪里脱第二层和第三层）。</p>
+<p>每个core模块的类型都是不一样的。先看个简单的名字为core的module，只是用于保存是否daemon on啊，pid怎么记录啊，core文件大小等信息<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                daemon;</span><br><span class="line">    ngx_flag_t                master;</span><br><span class="line"></span><br><span class="line">    ngx_msec_t                timer_resolution;</span><br><span class="line"></span><br><span class="line">    ngx_int_t                 worker_processes;</span><br><span class="line">    ngx_int_t                 debug_points;</span><br><span class="line"></span><br><span class="line">    ngx_int_t                 rlimit_nofile;</span><br><span class="line">    off_t                     rlimit_core;</span><br><span class="line"></span><br><span class="line">    int                       priority;</span><br><span class="line"></span><br><span class="line">    ngx_uint_t                cpu_affinity_auto;</span><br><span class="line">    ngx_uint_t                cpu_affinity_n;</span><br><span class="line">    ngx_cpuset_t             *cpu_affinity;</span><br><span class="line"></span><br><span class="line">    char                     *username;</span><br><span class="line">    ngx_uid_t                 user;</span><br><span class="line">    ngx_gid_t                 group;</span><br><span class="line"></span><br><span class="line">    ngx_str_t                 working_directory;</span><br><span class="line">    ngx_str_t                 lock_file;</span><br><span class="line"></span><br><span class="line">    ngx_str_t                 pid;</span><br><span class="line">    ngx_str_t                 oldpid;</span><br><span class="line"></span><br><span class="line">    ngx_array_t               env;</span><br><span class="line">    char                    **environment;</span><br><span class="line">&#125; ngx_core_conf_t;</span><br></pre></td></tr></table></figure></p>
+<p>简单不是我们想要的，来个最复杂的，对于http_core模块来说，它的类型如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure></p>
+<p>抽象的不要不要的，这也是我们要着重说的部分啦</p>
+<h2 id="2-3-http-core的main"><a href="#2-3-http-core的main" class="headerlink" title="2.3 http_core的main"></a>2.3 http_core的main</h2><p>前面我们提到过，每个模块（此后我们说的都是http扩展模块哈）的指令可以定义在不同的范围生效，这里先介绍最简单的情况：在main里生效的情况。这也是最简单的情况了。这个和前面提到的core module的方式类似，是以数组的方式组织的，下标即http模块的下标。<br>从前面的代码，我们能从全局变量cycle-&gt;conf_ctx拿到http core模块的配置即</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>main_conf,保留所有模块的main conf</li>
+<li>srv_conf和loc_conf，看到这里的时候，敏感的人就会想，这里明明是main即全局的ctx，srv_conf和loc_conf会不会是没用的？答案是有用的，干啥用的，后面一起讲</li>
+</ul>
+<p>每个模块的main conf就保存在**main_conf里，比如access_log模块index是32，那么他的main conf就是：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">((ngx_http_conf_ctx_t*)(cycle-&gt;conf_ctx[http_core_module_index]))-&gt;main_conf[32];</span><br></pre></td></tr></table></figure>
+<h2 id="2-4-http-core的server"><a href="#2-4-http-core的server" class="headerlink" title="2.4 http_core的server"></a>2.4 http_core的server</h2><p>模块的指令定义在server段的话，是保存在哪里呢？server实例不是全局唯一的，而是可以定义多个的，所以先需要知道server实例保存在哪里，进而知道如何在server实例里保存这个模块的配置。<br>找到了,它就在ngx_http_core_main_conf_t的servers成员里。servers是个数组，保存了所有server实例。</p>
+<p>在2.3里，提到过main conf，他是每个模块的全局配置保存的地方，这里需要提一句的是：http_core模块是个内置的核心模块，它本身会有一些配置，但最重要的它维护了在本main 段的所有server实例。</p>
+<p>那么server实例本身又是一个啥呢？你很眼熟，ngx_http_conf_ctx_t，前面有它的定义。那么这个家伙在这里又怎么理解呢？</p>
+<ul>
+<li>main_conf已经无用，因为这里已经是server段了</li>
+<li>srv_conf保留了本实例里所有模块的server conf配置，以模块下标索引，类似之前的思路</li>
+<li>loc_conf，和前面一样，这里是server段的ctx，那么loc_conf是不是没啥用，同样是有用的。</li>
+</ul>
+<h2 id="2-5-http-core的location"><a href="#2-5-http-core的location" class="headerlink" title="2.5 http_core的location"></a>2.5 http_core的location</h2><p>和前面的思路一样，我们需要知道location实例的窝藏点。<br>server实例们保存在ngx_http_core_main_conf_t里，那么location们按理应该保存在ngx_http_core_srv_conf_t里。<br>但失望了，它们确保存在ngx_http_core_loc_conf_t里。不美，但一定有原因，我不知道是为啥。（有人知道可以mail我qzzhou$126.com）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_queue_t  *locations;</span><br></pre></td></tr></table></figure>
+<p>每个locations成员的类型是ngx_http_location_queue_t,具体怎么加入locations，请查阅代码ngx_http_add_location。<br>但ngx_http_location_queue_t只是一个封装，具体有逻辑的结构还是ngx_http_core_loc_conf_t。<br>ngx_http_core_loc_conf_t里有一个loc_conf的成员，答对了，他就是保存所有模块location配置的地方。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/* pointer to the modules&apos; loc_conf */</span><br><span class="line">void        **loc_conf;</span><br></pre></td></tr></table></figure></p>
+<p>但location的实现着实不美丽啊，为啥不用ctx-&gt;loc_conf了呢，而是直接保存在ngx_http_core_loc_conf_t里呢？</p>
+<p>我擦，我好像有点明白了，这个location所在的ngx_http_core_loc_conf_t不是 core http里的conf，而是它的父亲ctx即server的loc conf。（这句话你们肯定不懂）<br>因为前面提到过在server级别的ctx里，srv_conf和loc_conf是有意义的，locations的queue是保存在server ctx的location conf里。</p>
+<h2 id="2-6-关于server和location实例的创建"><a href="#2-6-关于server和location实例的创建" class="headerlink" title="2.6 关于server和location实例的创建"></a>2.6 关于server和location实例的创建</h2><p>在遇到server{}和location{}后，会创建server实例和location实例。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">static char * ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)</span><br></pre></td></tr></table></figure>
+<p>在创建server 实例的时候，实际上就是创建一个ngx_http_core_srv_conf_t，并为其成员ctx赋值<br>ctx的main_conf和全局的main_conf相等<br>然后为每个模块创建server_conf和location_conf。这样一个ctx就完整了</p>
+<p>注意和前面呼应一下，server block里，还没有细化到location，创建了locatin_conf的用意是什么？因为毕竟location_conf要挂在一个location上嘛。</p>
+<p>然后通过ngx_array_push(&amp;cmcf-&gt;servers); 添加一个ngx_http_core_srv_conf_t。</p>
+<p>注意：我也是临时想到的，在解析文件过程中传递的一直是ngx_http_conf_ctx_t。但我们一直提到的实例是说ngx_http_core_srv_conf_t和ngx_http_core_main_conf_t这样的东西。别把解析和运行态搞混了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">    </span><br><span class="line">static char *</span><br><span class="line">ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)</span><br></pre></td></tr></table></figure>
+<p>这个是创建location实例，实际上是创建一个ngx_http_core_loc_conf_t，但是是封装在ngx_http_location_queue_t里。</p>
+<p>ngx_http_location_queue_t是queue的一个item，queue又挂在哪里呢？挂载这个location所在的server的core_http模块的loc_conf里<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_http_core_srv_conf_t-&gt;ctx-&gt;loc_conf[http_core_module.index].locations</span><br></pre></td></tr></table></figure></p>
+<p>因为locations只保存了一个地方，所以下面的地方就不一样了</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_http_core_loc_conf_t-&gt;ctx-&gt;loc_conf[http_core_module.index].locations</span><br></pre></td></tr></table></figure>
+<p>注意两片代码的层次不一样</p>
+<h2 id="2-7-关于merge操作"><a href="#2-7-关于merge操作" class="headerlink" title="2.7 关于merge操作"></a>2.7 关于merge操作</h2><p>问题的起源是，如果一个选项比如access_log在main里和server各有配置，怎么办？模块的作者需要自己写merge函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">static ngx_http_module_t  ngx_http_dyssl_module_ctx = &#123;</span><br><span class="line">    NULL,                             /* preconfiguration */</span><br><span class="line">    NULL,                             /* postconfiguration */</span><br><span class="line"></span><br><span class="line">    ngx_http_dyssl_create_main_conf,  /* create main configuration */</span><br><span class="line">    ngx_http_dyssl_init_main_conf,    /* init main configuration */</span><br><span class="line"></span><br><span class="line">    NULL,                             /* create server configuration */</span><br><span class="line">    NULL,                             /* merge server configuration */</span><br><span class="line"></span><br><span class="line">    NULL,                             /* create location configuration */</span><br><span class="line">    NULL                              /* merge location configuration */</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>那么nginx是怎么回调用户自己的函数的呢？<br>而且互调的时候的参数类型是一样的，比如一个模块的作者定义了一条指令 xxx on/off。这个指令可以在不同范围生效。<br>对应不同段的定义如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_loc_conf_t</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_srv_conf_t;</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_main_conf_t;</span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<p>假设模块的作者想要的规则是使用最小范围的。location没配，则用server里的，server里没配，则用main里的。<br>当merge location的时候，传入的都是ngx_http_vdu_mapping_loc_conf_t类型的。我当时的困惑是，location里的配置当然是ngx_http_vdu_mapping_loc_conf_t类型的，但server哪里来ngx_http_vdu_mapping_loc_conf_t类型的配置。</p>
+<p>再联想一下前面说的问题，为啥创建server实例的时候，会把各个模块的location实例创建出来一个，那时候分明还有没有解析到location配置。这个家伙就用用来merge的。那问题来了，他的enable的值从哪里来呢？当然是在server段里配置 xxx on/off的时候。<br>其实前面的类型定义的代码是错误的，<br>当一个指令可以在各个范围生效的时候，需要把这个指令存储在最小的范围里，所以上面的定义应该改成：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    //</span><br><span class="line">&#125; ngx_http_xxx_loc_conf_t</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    //</span><br><span class="line">&#125; ngx_http_xxx_srv_conf_t;</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_main_conf_t;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>然后定义commands的时候<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    ngx_string(&quot;xxx&quot;),</span><br><span class="line">    NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONFNGX_CONF_FLAG,</span><br><span class="line">    ngx_conf_set_flag_slot,</span><br><span class="line">    NGX_HTTP_LOC_CONF_OFFSET,</span><br><span class="line">    offsetof(ngx_http_xxx_loc_conf_t, enable),</span><br><span class="line">    NULL</span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure></p>
+<p>NGX_HTTP_LOC_CONF_OFFSET是告诉nginx，放到ctx的那个conf里，还记得ctx的定义么？<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure></p>
+<p>然后offset那一行，告诉存储在那个变量里</p>
+<p>最后关键来了，怎么merge呢？对于一个模块来说，就是用main实例里的srv_conf和server实例离的srv_conf merge，然后用server实例里的loc_conf和location实例离的loc_conf merge。</p>
+<p>注意merge的时候是会改变配置的哦。</p>
+<p>好了，分析结束，上一个大图。</p>
+<p><img src="nginx_conf.jpg" alt=""></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/05/10/nginx的配置管理/" data-id="cjn4dgo9o000qbklormze67tj" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2017/05/23/关于编译hyperscan/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          关于编译hyperscan
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/05/05/openssl签发证书/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">openssl签发证书</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/26/理解字节序/">理解字节序</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/14/a-out的幕后/">a.out的幕后</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
+          </li>
+        
+          <li>
+            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 abonege<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

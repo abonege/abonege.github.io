@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>nginx进程架构 | 秋月春风等闲度,暮去朝来颜色故</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="nginx采用了打单master+多worker的进程方式来协同工作，master负责管理worker进程和加载更新配置文件等操作，在本文我们间接一下他是如何实现的。云环境部署nginx需要考虑哪些因素呢？">
+<meta name="keywords" content="nginx">
+<meta property="og:type" content="article">
+<meta property="og:title" content="nginx进程架构">
+<meta property="og:url" content="http://abonege.github.io/2016/10/09/nginx进程架构/index.html">
+<meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:description" content="nginx采用了打单master+多worker的进程方式来协同工作，master负责管理worker进程和加载更新配置文件等操作，在本文我们间接一下他是如何实现的。云环境部署nginx需要考虑哪些因素呢？">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2018-10-11T09:12:42.405Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="nginx进程架构">
+<meta name="twitter:description" content="nginx采用了打单master+多worker的进程方式来协同工作，master负责管理worker进程和加载更新配置文件等操作，在本文我们间接一下他是如何实现的。云环境部署nginx需要考虑哪些因素呢？">
+  
+    <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">秋月春风等闲度,暮去朝来颜色故</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://abonege.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-nginx进程架构" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/10/09/nginx进程架构/" class="article-date">
+  <time datetime="2016-10-09T02:53:33.000Z" itemprop="datePublished">2016-10-09</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      nginx进程架构
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="1-概述"><a href="#1-概述" class="headerlink" title="1.概述"></a>1.概述</h1><p>nginx默认采用的是多进程的架构方式。和haproxy有很大的不同，haproxy作者是推荐使用但进程的方式的，因为作者认为单进程的性能能应付大部分的case。而且多进程会带来很复杂的管理面问题，所以也不得宠。<br>但nginx采用单master+多worker进程的架构方式，天然就是为了多进程服务。<br>很多人看nginx代码，都迫不及待的看什么样的io模型，怎么快速做的http解析和收发等数据平面的东西，但当面临使用的时候，管理面遇到的问题远远比数据面严重的多，比如我们要是在云环境中使用nginx为用户做负载均衡或者cdn/waf之类的，必然要考虑如下的问题</p>
+<ul>
+<li>如何做到横向扩展，比如一台机器启动多少进程？多加机器能解决性能问题么？</li>
+<li>m台机器，一台机器n个nginx进程，如何管理这些m*n个进程？比如加载新配置，比如重启死循环或者hang住的进程</li>
+<li>当升级重启的时候，如何做到真正的0宕机？</li>
+<li>m*n的nginx集群，他们的统计怎么搞？比如访问的top 10 域名是什么？</li>
+</ul>
+<p>master进程可以认为是管理平面的东西：</p>
+<ul>
+<li>加载/更新配置文件</li>
+<li>管理所有worker进程的创建，重启</li>
+</ul>
+<p>然后我们看一下nginx是如何管理worker进程和配置文件的更新的</p>
+<h1 id="2-关于worker进程的管理"><a href="#2-关于worker进程的管理" class="headerlink" title="2.关于worker进程的管理"></a>2.关于worker进程的管理</h1><p>worker进程是从master进程fork出来的进程，nginx提供了几种不同的fork方式：</p>
+<ul>
+<li>NGX_PROCESS_NORESPAWN</li>
+<li>NGX_PROCESS_JUST_SPAWN</li>
+<li>NGX_PROCESS_RESPAWN</li>
+<li>NGX_PROCESS_JUST_RESPAWN</li>
+<li>NGX_PROCESS_DETACHED</li>
+</ul>
+<p>我们一个一个理一下</p>
+<h2 id="2-1-NGX-PROCESS-RESPAWN"><a href="#2-1-NGX-PROCESS-RESPAWN" class="headerlink" title="2.1.NGX_PROCESS_RESPAWN"></a>2.1.NGX_PROCESS_RESPAWN</h2><p>这个是最常规的操作，fork worker进程的时候设置这个标志，当worker进程因为意外退出的时候，master进程会执行再生(respawn)操作。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">static ngx_uint_t</span><br><span class="line">ngx_reap_children(ngx_cycle_t *cycle)</span><br><span class="line">&#123;</span><br><span class="line">    //......</span><br><span class="line">    if (ngx_processes[i].exited) &#123;</span><br><span class="line">        //......</span><br><span class="line">        if (ngx_processes[i].respawn</span><br><span class="line">                &amp;&amp; !ngx_processes[i].exiting</span><br><span class="line">                &amp;&amp; !ngx_terminate</span><br><span class="line">                &amp;&amp; !ngx_quit)</span><br><span class="line">        &#123;</span><br><span class="line">            if (ngx_spawn_process(cycle, ngx_processes[i].proc,</span><br><span class="line">            //.....</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>所以可以认为初次启动master的时候（比如刚启动，比如更新二进制了）都用以这个参数启动worker</p>
+<h2 id="2-2-NGX-PROCESS-JUST-RESPAWN"><a href="#2-2-NGX-PROCESS-JUST-RESPAWN" class="headerlink" title="2.2.NGX_PROCESS_JUST_RESPAWN"></a>2.2.NGX_PROCESS_JUST_RESPAWN</h2><p>just是刚刚的意思，刚刚spawn出来的，用于更新配置的时候，因为更新配置执行如下的步骤<br>1.master加载新配置文件<br>2.fork新的worker进程<br>3.给使用旧配置文件的worker进程发QUIT信号</p>
+<p>第二步fork进程的时候腰加上NGX_PROCESS_JUST_RESPAWN这个标志，用于给第三步区分哪些是旧进程，哪些是新欢。</p>
+<h2 id="2-3-NGX-PROCESS-JUST-SPAWN"><a href="#2-3-NGX-PROCESS-JUST-SPAWN" class="headerlink" title="2.3.NGX_PROCESS_JUST_SPAWN"></a>2.3.NGX_PROCESS_JUST_SPAWN</h2><p>这个和上一个差不多，用于cache manager，我不喜欢</p>
+<p>这里注意一下，上面提到的3个类型，其实是转化成2个标志的，即respawn和just。<br>just:刚刚搞出来的，别动我，只动就的，用于区分新旧<br>respawn:本进程被master管理，死的时候可以自动拉起<br>spwawn由于前面没有re，只是fork出来就拉倒，所以JUST_SPAWN只有just是有含义的</p>
+<h2 id="2-4-NGX-PROCESS-DETACHED"><a href="#2-4-NGX-PROCESS-DETACHED" class="headerlink" title="2.4.NGX_PROCESS_DETACHED"></a>2.4.NGX_PROCESS_DETACHED</h2><p>这是说fork出来的进程和父进程没有管理的关系，比如nginx的master升级（老版本有bug），新的master从旧的mastr fork出来，就需要这样的标志，fork出来后和父进程没啥关系</p>
+<h2 id="2-5-NGX-PROCESS-NORESPAWN"><a href="#2-5-NGX-PROCESS-NORESPAWN" class="headerlink" title="2.5.NGX_PROCESS_NORESPAWN"></a>2.5.NGX_PROCESS_NORESPAWN</h2><p>cache loader会用到，当第一次启动的时候，使用NGX_PROCESS_NORESPAWN，就是启动一个进程执行ngx_cache_manager_process_cycle.但需要注意和上面的DETACHED的区别，因为在nginx里，一般父子进程都有很多管道通讯，只有DETACHED的模式下没有pipe通讯，这个NORESPAWN是保留了和父进程的管道通讯的</p>
+<p>但是当重新加载配置的时候，还是继续使用NGX_PROCESS_JUST_SPAWN来区分新欢旧爱的</p>
+<h1 id="3-关于配置文件的加载过程"><a href="#3-关于配置文件的加载过程" class="headerlink" title="3.关于配置文件的加载过程"></a>3.关于配置文件的加载过程</h1><p>修改完配置文件后，通过如下的步骤让配置文件生效</p>
+<ul>
+<li>给master进程发送HUP信号</li>
+</ul>
+<p>master收到信号后会设置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_reconfigure = 1;</span><br></pre></td></tr></table></figure>
+<p>然后下个周期检查ngx_reconfigure，调用ngx_init_cycle重新解析配置文件，生成一个cycle，注意一个cycle可以理解对应一个配置文件的周期。<br>在ngx_init_cycle里会做一些listner的bind和unbind操作，即旧的listener和新的listener的merge，当然还有其他配置的merge。</p>
+<ul>
+<li>fork worker进程</li>
+</ul>
+<p>worker进程里当然会能访问前面的cycle对象</p>
+<ul>
+<li>给所有旧的worker发送NGX_SHUTDOWN_SIGNAL信号</li>
+</ul>
+<p>旧的worker进程收到后，会关闭listen socket，然后等所有连接断开后，进程退出。</p>
+<h1 id="4-关于二进制的升级"><a href="#4-关于二进制的升级" class="headerlink" title="4.关于二进制的升级"></a>4.关于二进制的升级</h1><p>写代码难免有bug，有bug就得改，改了后想生效就得升级。</p>
+<p>给master发送一个USR2信号，ngx_change_binary会设置为1.<br>然后在那个ngx_init_cycle里，master进程会fork进程执行新的二进制（ngx_execute_proc）<br>ngx_new_binary会赋值为新master的进程id。<br>master起来后就是全新的master，会自动拉起新的worker进程，注意老master和新master都监听相同的listen socket，因为是fork出来执行execv的所以一样，nginx的listen socket的merger是它的killer feature。</p>
+<p>这时候2套master和worker进程都在了，然后给旧的master发送WINCH信号,master会给worker发送graceful shutdown通知<br>这样就剩下旧的master+新的master+新的worker了，<br>为啥要留着旧的master呢？因为怕新的二进制有问题，如果有问题的话，</p>
+<ul>
+<li>发送HUP给旧的master，旧的worker就起来了</li>
+<li>发送TERM给新的master，刚来起来的worker就被干掉了</li>
+</ul>
+<!-- 多说评论框 start -->
+<pre><code>&lt;div class=&quot;ds-thread&quot; data-thread-key=&quot;nginx_1&quot; data-title=&quot;nginx进程架构&quot; data-url=&quot;&quot;&gt;&lt;/div&gt;
+</code></pre><!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<p><script type="text/javascript"><br>var duoshuoQuery = {short_name:”abonege”};<br>    (function() {<br>        var ds = document.createElement(‘script’);<br>        ds.type = ‘text/javascript’;ds.async = true;<br>        ds.src = (document.location.protocol == ‘https:’ ? ‘https:’ : ‘http:’) + ‘//static.duoshuo.com/embed.js’;<br>        ds.charset = ‘UTF-8’;<br>        (document.getElementsByTagName(‘head’)[0]<br>         || document.getElementsByTagName(‘body’)[0]).appendChild(ds);<br>    })();<br>    </script><br><!-- 多说公共JS代码 end --></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/10/09/nginx进程架构/" data-id="cjn4dgo9p000tbkloem8let0v" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2017/01/20/RSA加密/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          RSA加密
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/08/21/关于代码优化/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">关于代码优化</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/26/理解字节序/">理解字节序</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/14/a-out的幕后/">a.out的幕后</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
+          </li>
+        
+          <li>
+            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 abonege<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
