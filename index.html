@@ -94,7 +94,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2018/04/26/理解字节序/" data-id="cjn4dgo9y001cbklo85tvfj1h" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2018/04/26/理解字节序/" data-id="cjn4f8q4z001ckmlo42ew9eyf" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/字节序/">字节序</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
@@ -133,7 +133,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2018/02/14/a-out的幕后/" data-id="cjn4dgo9f000dbklogrgmf97k" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2018/02/14/a-out的幕后/" data-id="cjn4f8q460008kmlodpwbv98l" class="article-share-link">Share</a>
       
       
     </footer>
@@ -176,7 +176,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2018/01/31/RSA算法证明/" data-id="cjn4dgo900005bklosi35w1hr" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2018/01/31/RSA算法证明/" data-id="cjn4f8q3z0005kmlo87af4ww1" class="article-share-link">Share</a>
       
       
     </footer>
@@ -273,7 +273,7 @@
 <li>还有证书过期，吊销等验证</li>
 </ul>
 <p>怎么认证证书的合法性呢？<br>我们的操作系统内置了很多root CA，这些CA都是有颁发签署新证书能力的。再其颁发的所有证书上，都有CA对这个证书的签名（用CA私钥）。浏览器拿到证书后，可以下载到CA的公钥，然后用公钥验证签名。从而知道证书的合法性。</p>
-<h2 id="继续签名"><a href="#继续签名" class="headerlink" title="继续签名"></a>继续签名</h2><p>CA帮助我们的证书做了签名，证明了这个证书的合法性。但是我们client/server实际交互的时候，还需要一个签名，这个签名是保证，server确实拥有这个证书。</p>
+<h2 id="继续签名"><a href="#继续签名" class="headerlink" title="继续签名"></a>继续签名</h2><p>CA帮助我们的证书做了签名，证明了这个证书的合法性。但是我们client/server实际交互的时候，还需要一个签名，这个签名是保证，server确实拥有这个证书，别人休想模仿我。</p>
 <p>对于RSA来讲，这个问题是简单的。因为证书里有被CA签名过的server的公钥，client既然能使用这个公钥和server完成密钥协商，那么server一定是合法拥有这个证书的。</p>
 <p>我们主要讨论后来广泛使用的ECDHE，考虑向前安全性，ECDH已经基本废了。ECDHE都是临时生成对称密钥的方式，证书里的公钥对应的私钥（保存在服务器中）没有用于协商密钥。<br>只有让其参与到ssl过程中来，才能证明其合法的拥有证书。所以ECDHE是需要签名的（这里的签名是数据传输过程中的签名，不是证书签名）。<br>通常有两种RSA和ECDSA。</p>
 <p>先说RSA，为了证明server对这个证书的合法拥有，在server-key-exchange消息的时候，回把这个消息签名（使用证书私钥+RSA算法）</p>
@@ -335,7 +335,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2018/01/05/SSL基础知识总结/" data-id="cjn4dgo9a0009bklo4pjiaxo7" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2018/01/05/SSL基础知识总结/" data-id="cjn4f8q430007kmloj7tzysgh" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SSL/">SSL</a></li></ul>
@@ -532,7 +532,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/12/15/nginx实现动态resolve的思路/" data-id="cjn4dgo9o000pbklo1x0jsa8e" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/12/15/nginx实现动态resolve的思路/" data-id="cjn4f8q4l000okmlotx3m83s9" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/resolve/">resolve</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/upstream/">upstream</a></li></ul>
@@ -599,7 +599,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/11/07/nginx上支持手工封禁请求的的思路/" data-id="cjn4dgo9m000lbklo9kouqjep" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/11/07/nginx上支持手工封禁请求的的思路/" data-id="cjn4f8q4h000kkmloj2x1qcet" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li></ul>
@@ -862,7 +862,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/11/06/hyperscan使用/" data-id="cjn4dgo9j000hbklokj8arpx2" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/11/06/hyperscan使用/" data-id="cjn4f8q4e000fkmloz5ht7pl0" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/intel/">intel</a></li></ul>
@@ -917,7 +917,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/05/23/关于编译hyperscan/" data-id="cjn4dgo9t0011bklouf50vmhk" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/05/23/关于编译hyperscan/" data-id="cjn4f8q4r000ykmloa05my6e4" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li></ul>
@@ -1029,7 +1029,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/05/10/nginx的配置管理/" data-id="cjn4dgo9o000qbklormze67tj" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/05/10/nginx的配置管理/" data-id="cjn4f8q4m000rkmlo8j4zzkhp" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
@@ -1152,7 +1152,7 @@ openssl x509 -inform PEM -in client1.pem -outform PEM -pubkey -noout
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/05/05/openssl签发证书/" data-id="cjn4dgo9q000vbkloz7qdlz1v" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/05/05/openssl签发证书/" data-id="cjn4f8q4q000wkmloiespwdhl" class="article-share-link">Share</a>
       
       
     </footer>

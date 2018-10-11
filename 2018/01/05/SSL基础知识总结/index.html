@@ -25,7 +25,7 @@
 <meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/ssl-handshake-rsa.png">
 <meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/ssl-handshake-dh.png">
 <meta property="og:image" content="http://abonege.github.io/2018/01/05/SSL基础知识总结/keyless.png">
-<meta property="og:updated_time" content="2018-10-11T09:40:42.714Z">
+<meta property="og:updated_time" content="2018-10-11T10:08:33.604Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SSL基础知识总结">
 <meta name="twitter:description" content="SSL相关的概念特别多，对于勉强入门的我们实在是晦涩的很，抽空总结一下我对SSL的理解，希望对同志们有所帮助">
@@ -163,7 +163,7 @@
 <li>还有证书过期，吊销等验证</li>
 </ul>
 <p>怎么认证证书的合法性呢？<br>我们的操作系统内置了很多root CA，这些CA都是有颁发签署新证书能力的。再其颁发的所有证书上，都有CA对这个证书的签名（用CA私钥）。浏览器拿到证书后，可以下载到CA的公钥，然后用公钥验证签名。从而知道证书的合法性。</p>
-<h2 id="继续签名"><a href="#继续签名" class="headerlink" title="继续签名"></a>继续签名</h2><p>CA帮助我们的证书做了签名，证明了这个证书的合法性。但是我们client/server实际交互的时候，还需要一个签名，这个签名是保证，server确实拥有这个证书。</p>
+<h2 id="继续签名"><a href="#继续签名" class="headerlink" title="继续签名"></a>继续签名</h2><p>CA帮助我们的证书做了签名，证明了这个证书的合法性。但是我们client/server实际交互的时候，还需要一个签名，这个签名是保证，server确实拥有这个证书，别人休想模仿我。</p>
 <p>对于RSA来讲，这个问题是简单的。因为证书里有被CA签名过的server的公钥，client既然能使用这个公钥和server完成密钥协商，那么server一定是合法拥有这个证书的。</p>
 <p>我们主要讨论后来广泛使用的ECDHE，考虑向前安全性，ECDH已经基本废了。ECDHE都是临时生成对称密钥的方式，证书里的公钥对应的私钥（保存在服务器中）没有用于协商密钥。<br>只有让其参与到ssl过程中来，才能证明其合法的拥有证书。所以ECDHE是需要签名的（这里的签名是数据传输过程中的签名，不是证书签名）。<br>通常有两种RSA和ECDSA。</p>
 <p>先说RSA，为了证明server对这个证书的合法拥有，在server-key-exchange消息的时候，回把这个消息签名（使用证书私钥+RSA算法）</p>
@@ -225,7 +225,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2018/01/05/SSL基础知识总结/" data-id="cjn4dgo9a0009bklo4pjiaxo7" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2018/01/05/SSL基础知识总结/" data-id="cjn4f8q430007kmloj7tzysgh" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SSL/">SSL</a></li></ul>
