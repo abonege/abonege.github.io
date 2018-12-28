@@ -1,3 +1,821 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>秋月春风等闲度,暮去朝来颜色故</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/normalize/8.0.1/normalize.min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/1.0.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/pure/1.0.0/grids-responsive-min.css"><link rel="stylesheet" href="//lib.baomitu.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//lib.baomitu.com/jquery/3.3.1/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">秋月春风等闲度,暮去朝来颜色故</h1><a id="logo" href="/.">秋月春风等闲度,暮去朝来颜色故</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title"><a href="/2017/05/04/socket编程的内核实现/">socket编程的内核实现</a></h1><div class="post-meta">2017-05-04</div><div class="post-content">我就是想理一理socket变成和内核协议栈的关系。比如accept/listen/epoll等在内核的实现。</div><p class="readmore"><a href="/2017/05/04/socket编程的内核实现/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2017/05/04/nginx与reuseport/">关于reuseport那些事儿</a></h1><div class="post-meta">2017-05-04</div><div class="post-content"><p>nginx开启reuse port后，据说benchmark能跑很多。那么为啥nginx能在reuseport开启的情况下性能提升不少呢？nginx使用reuseport需要注意哪些问题呢？</p>
-<h2 id="1-摘要"><a href="#1-摘要" class="headerlink" title="1.摘要"></a>1.摘要</h2><p>reuseport是在nginx 1.9.1里提供了支持，官方更是提供了篇幅介绍reuseport带来的好处，主要是benchmark的提升。</p></div><p class="readmore"><a href="/2017/05/04/nginx与reuseport/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2017/01/20/RSA加密/">RSA加密</a></h1><div class="post-meta">2017-01-20</div><div class="post-content">openssl里使用RSA对大块数据进行加密。但下面的代码实现的base64还是有点弱的，不能和nginx的base64搭配使用。标准的做法，还得用nginx自带的base64</div><p class="readmore"><a href="/2017/01/20/RSA加密/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/10/09/nginx进程架构/">nginx进程架构</a></h1><div class="post-meta">2016-10-09</div><div class="post-content">nginx采用了打单master+多worker的进程方式来协同工作，master负责管理worker进程和加载更新配置文件等操作，在本文我们间接一下他是如何实现的。云环境部署nginx需要考虑哪些因素呢？</div><p class="readmore"><a href="/2016/10/09/nginx进程架构/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/08/21/关于代码优化/">关于代码优化</a></h1><div class="post-meta">2016-08-21</div><div class="post-content">如何优化代码？架构？算法？CPU缓存？还是什么？</div><p class="readmore"><a href="/2016/08/21/关于代码优化/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/06/30/neutron资源添加属性/">neutron资源添加属性</a></h1><div class="post-meta">2016-06-30</div><div class="post-content">neutron核心管理的就是资源，那么如何为资源添加一个属性呢？比如network增加一个创建时间。</div><p class="readmore"><a href="/2016/06/30/neutron资源添加属性/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/06/27/创建资源后如何通知agent/">创建资源后如何通知agent</a></h1><div class="post-meta">2016-06-27</div><div class="post-content">neutron负责管理资源，agent是个打手负责执行？那么前后是怎么协同工作的呢？</div><p class="readmore"><a href="/2016/06/27/创建资源后如何通知agent/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/06/24/emacs显示行尾空格/">emacs显示行尾空格</a></h1><div class="post-meta">2016-06-24</div><div class="post-content"><p>emacs写python的时候，行尾的空格能显示还是很不错的，找了好几个插件,blankmode,whitespce啥的，后来发现一个简单的highlight-chars.el就能搞定。<br>主页：<a href="https://www.emacswiki.org/emacs/highlight-chars.el" target="_blank" rel="noopener">https://www.emacswiki.org/emacs/highlight-chars.el</a><br>.emacs里添加<br><code><br>(require ‘highlight-chars)<br>(hc-toggle-highlight-trailing-whitespace)<br></code></p></div><p class="readmore"><a href="/2016/06/24/emacs显示行尾空格/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/06/08/删除子网的时候DHCP的变化/">删除子网的时候DHCP的变化</a></h1><div class="post-meta">2016-06-08</div><div class="post-content"><p>我们通常知道的答案是当删除子网的时候会会回调dhcp-agent的<code>subnet_delete_end</code>函数。然后调用driver的<code>restart</code>来重新加载dnsmasq进程，但今天我想说一点细节的东西。</p>
-<p>##细节一：什么时候把一个网络分发到一个agent上去，</p></div><p class="readmore"><a href="/2016/06/08/删除子网的时候DHCP的变化/">阅读全文</a></p></div><div class="post"><h1 class="post-title"><a href="/2016/06/01/Neutron中的流表/">Neutron中的流表</a></h1><div class="post-meta">2016-06-01</div><div class="post-content"><h2 id="br-int-br-tun"><a href="#br-int-br-tun" class="headerlink" title="br-int, br-tun"></a>br-int, br-tun</h2><p>br-int是一个ovs桥，不是linux bridge，这个ovs桥把本计算节点上的所有vm的port连接上，那怎么才能让这些不同租户的port不互相干扰呢，就是用vlan，每个租户分配不同的vlan tag。</p></div><p class="readmore"><a href="/2016/06/01/Neutron中的流表/">阅读全文</a></p></div><nav class="page-navigator"><a class="extend prev" rel="prev" href="/">上一页</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">下一页</a></nav></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://abonege.github.io"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/CC防护，nginx，封禁/" style="font-size: 15px;">CC防护，nginx，封禁</a> <a href="/tags/neutron/" style="font-size: 15px;">neutron</a> <a href="/tags/flow-table/" style="font-size: 15px;">flow-table</a> <a href="/tags/RSA加密/" style="font-size: 15px;">RSA加密</a> <a href="/tags/openssl/" style="font-size: 15px;">openssl</a> <a href="/tags/SSL/" style="font-size: 15px;">SSL</a> <a href="/tags/emacs/" style="font-size: 15px;">emacs</a> <a href="/tags/hyperscan/" style="font-size: 15px;">hyperscan</a> <a href="/tags/intel/" style="font-size: 15px;">intel</a> <a href="/tags/RegEx/" style="font-size: 15px;">RegEx</a> <a href="/tags/安全组/" style="font-size: 15px;">安全组</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/upstream/" style="font-size: 15px;">upstream</a> <a href="/tags/resolve/" style="font-size: 15px;">resolve</a> <a href="/tags/hyperscan编译/" style="font-size: 15px;">hyperscan编译</a> <a href="/tags/ovs/" style="font-size: 15px;">ovs</a> <a href="/tags/openvswitch/" style="font-size: 15px;">openvswitch</a> <a href="/tags/字节序/" style="font-size: 15px;">字节序</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 15px;">网络字节序，主机字节序</a> <a href="/tags/游记/" style="font-size: 15px;">游记</a> <a href="/tags/hexo使用/" style="font-size: 15px;">hexo使用</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2018/04/26/理解字节序/">理解字节序</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/02/14/a-out的幕后/">a.out的幕后</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/31/RSA算法证明/">RSA算法证明</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/11/07/nginx上支持手工封禁请求的的思路/">nginx上支持手工封禁请求的的思路</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/11/06/hyperscan使用/">hyperscan使用</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/23/关于编译hyperscan/">关于编译hyperscan</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/10/nginx的配置管理/">nginx的配置管理</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/05/openssl签发证书/">openssl签发证书</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://www.example1.com/" title="site-name1" target="_blank">site-name1</a><ul></ul><a href="http://www.example2.com/" title="site-name2" target="_blank">site-name2</a><ul></ul><a href="http://www.example3.com/" title="site-name3" target="_blank">site-name3</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2018 <a href="/." rel="nofollow">秋月春风等闲度,暮去朝来颜色故.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//lib.baomitu.com/fancybox/3.5.2/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//lib.baomitu.com/fancybox/3.5.2/jquery.fancybox.min.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>秋月春风等闲度,暮去朝来颜色故</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta property="og:type" content="website">
+<meta property="og:title" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:url" content="http://abonege.github.io/page/2/index.html">
+<meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:locale" content="zh-CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="秋月春风等闲度,暮去朝来颜色故">
+  
+    <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">秋月春风等闲度,暮去朝来颜色故</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://abonege.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main">
+  
+    <article id="post-socket编程的内核实现" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/05/04/socket编程的内核实现/" class="article-date">
+  <time datetime="2017-05-04T02:53:49.000Z" itemprop="datePublished">2017-05-04</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2017/05/04/socket编程的内核实现/">socket编程的内核实现</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="1-一些全局结构"><a href="#1-一些全局结构" class="headerlink" title="1.一些全局结构"></a>1.一些全局结构</h1><p>inetsw_array是全局定义的回调函数，不同协议，不同回调，可以简单看一下tcp协议的ops</p>
+<pre>
+
+    struct proto tcp_prot = {
+    .name            = "TCP",
+    .owner            = THIS_MODULE,
+    .close            = tcp_close,
+    .connect        = tcp_v4_connect,
+    .disconnect        = tcp_disconnect,
+    .accept            = inet_csk_accept,
+    .ioctl            = tcp_ioctl,
+    .init            = tcp_v4_init_sock,
+    .destroy        = tcp_v4_destroy_sock,
+    .shutdown        = tcp_shutdown,
+</pre>
+
+
+<p>tcp socket的ops</p>
+<pre>
+    const struct proto_ops inet_stream_ops = {
+        .family           = PF_INET,
+        .owner           = THIS_MODULE,
+        .release       = inet_release,
+        .bind           = inet_bind,
+        .connect       = inet_stream_connect,
+        .socketpair       = sock_no_socketpair,
+        .accept           = inet_accept,
+        .getname       = inet_getname,
+        .poll           = tcp_poll,
+        .ioctl           = inet_ioctl,
+        .listen           = inet_listen,
+        .shutdown       = inet_shutdown,
+        .setsockopt       = sock_common_setsockopt,
+        .getsockopt       = sock_common_getsockopt,
+        .sendmsg       = inet_sendmsg,
+        .recvmsg       = inet_recvmsg,
+        .mmap           = sock_no_mmap,
+        .sendpage       = inet_sendpage,
+        .splice_read       = tcp_splice_read,
+    #ifdef CONFIG_COMPAT
+        .compat_setsockopt = compat_sock_common_setsockopt,
+        .compat_getsockopt = compat_sock_common_getsockopt,
+        .compat_ioctl       = inet_compat_ioctl,
+    #endif
+    };
+</pre>
+
+<p>真正开始listener在inet_csk_listen_start</p>
+<p>tcp_rcv_state_process<br>    tcp_v4_conn_request</p>
+<pre><code>inet_csk_reqsk_queue_hash_add
+    inet_csk_reqsk_queue_added
+        reqsk_queue_added
+</code></pre><p>tcp_sock有seq ack之类的信息</p>
+<p>sock<br>inet_sock</p>
+<p>accept的入口<br>inet_csk_accept<br>它是从这个队列里取 struct request_sock_queue *queue = &amp;icsk-&gt;icsk_accept_queue;</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/05/04/socket编程的内核实现/" data-id="cjq7qznak0011jmlonjybek2p" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-nginx与reuseport" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/05/04/nginx与reuseport/" class="article-date">
+  <time datetime="2017-05-04T02:48:31.000Z" itemprop="datePublished">2017-05-04</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2017/05/04/nginx与reuseport/">关于reuseport那些事儿</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>nginx开启reuse port后，据说benchmark能跑很多。那么为啥nginx能在reuseport开启的情况下性能提升不少呢？nginx使用reuseport需要注意哪些问题呢？</p>
+<h2 id="1-摘要"><a href="#1-摘要" class="headerlink" title="1.摘要"></a>1.摘要</h2><p>reuseport是在nginx 1.9.1里提供了支持，官方更是提供了篇幅介绍reuseport带来的好处，主要是benchmark的提升。</p>
+<p>具体详情可见：<a href="https://www.nginx.com/blog/socket-sharding-nginx-release-1-9-1/" target="_blank" rel="noopener">https://www.nginx.com/blog/socket-sharding-nginx-release-1-9-1/</a></p>
+<p>我们这里想介绍一下，在nginx里是如何使用reuseport功能带来性能提升的</p>
+<h2 id="2-reuseport的原理"><a href="#2-reuseport的原理" class="headerlink" title="2.reuseport的原理"></a>2.reuseport的原理</h2><p>在3.9内核以前，为了支持多进程模型像haproxy，nginx等，大家不约而同的采用的fork的做法，即在父进程里，监听一个IP+port。<br>然后fork出N个子进程，子进程天然继承了父进程的listen socket的句柄，即可以执行accept操作了。</p>
+<p><img src="fork_share.png" alt=""></p>
+<p>但因为是fork出来的，所以在kernel里，仍然是一个句柄，多个进程执行accept还是有竞争关系，所以nginx需要配置accept_mutex这样的开关</p>
+<p>当开启reuseport后，每个监听地址将会有多个句柄，具体来说是一个worker一个，这样每个worker关心的listen socket就独立开了，自己搞定自己的事，避免了多进程的竞争。</p>
+<p><img src="reuseport_share.png" alt=""></p>
+<h2 id="3-reuseport在nginx的使用"><a href="#3-reuseport在nginx的使用" class="headerlink" title="3.reuseport在nginx的使用"></a>3.reuseport在nginx的使用</h2><p>通常情况下，使用reuseaddr都是启动多个进程，大家绑定相同的IP和port，然后就可以无限发挥reuseport的特性了。<br>但nginx毕竟还是采用了fork的模型。那么个是如何充分利用reuseport的呢？看代码吧。<br>在ngx_clone_listening里有这样的代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">for (n = 1; n &lt; ccf-&gt;worker_processes; n++) &#123;    </span><br><span class="line"></span><br><span class="line">    /* create a socket for each worker process */</span><br><span class="line"></span><br><span class="line">    ls = ngx_array_push(&amp;cf-&gt;cycle-&gt;listening);</span><br><span class="line">    if (ls == NULL) &#123;</span><br><span class="line">        return NGX_ERROR;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    *ls = ols;</span><br><span class="line">    ls-&gt;worker = n;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>(注意是从1开始的，因为master会创建一个worker是0的listener)<br>也就是解析完配置文件后，会根据worker的个数fork出来多个listener对象，统一扔到数组里，那么啥时候打开监听呢?</p>
+<p>ngx_init_cycle<br>—&gt;ngx_open_listening_sockets<br>    —&gt;bind<br>    —&gt;listen</p>
+<p>因为设置了reuseport，所以数组里塞进去的ip port重复的listener可以创建好。<br>比如有8个worker，会创建出8个listen socket。</p>
+<p>那么剩下来的问题就是，如何让一个listen socket和worker进程绑定。</p>
+<p>那么就看ngx_event_process_init，worker进程初始化event模块的时候，会调用这个函数。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#if (NGX_HAVE_REUSEPORT)</span><br><span class="line">       if (ls[i].reuseport &amp;&amp; ls[i].worker != ngx_worker) &#123;</span><br><span class="line">           continue;</span><br><span class="line">       &#125;</span><br><span class="line">#endif</span><br></pre></td></tr></table></figure>
+<p>这里可以看出，我只把自己worker对应的listen socket加入到epoll里去。</p>
+<h2 id="4-reuseport在nginx使用中遇到的问题"><a href="#4-reuseport在nginx使用中遇到的问题" class="headerlink" title="4.reuseport在nginx使用中遇到的问题"></a>4.reuseport在nginx使用中遇到的问题</h2><p>先说现象：<br>nginx从reuseport升级为非reuseport，以及从多worker升级为少worker都会有大量性能下降。<br>这里还是需要介绍一下reuseport的升级的流程，好trick。</p>
+<p>升级的时候，也就是-USR2的时候，old maste启动新master的时候，会把所有listen socket的句柄们放在新进程的环境变量里。如果reuseport，举监听80端口为例，如果开启了4个worker，那么环境变量则存了4个句柄，格式为<br>句柄id1；句柄id2；句柄id3；句柄id4。<br>新的master启动后会把这个4个句柄读出来，注意，这4个句柄在新进程里也是合法的，然后调用各种syscall获得这个句柄的信息</p>
+<ul>
+<li>ls[i].sockaddr (调用getsockname())</li>
+<li>ls[i].addr_text_max_len</li>
+<li>ls[i].addr_text</li>
+<li>ls[i].backlog</li>
+<li>ls[i].rcvbuf (调用getsockopt())</li>
+<li>ls[i].sndbuf (调用getsockopt())</li>
+<li>ls[i].accept_filter</li>
+<li>ls[i].deferred_accept</li>
+</ul>
+<p>这个信息是放在old_cycle里的，然后加载配置文件，配置文件里也依然会监听80端口，这时新的cycle的listening数组里会有一个ngx_listening_t,但是在ngx_http_optimize_servers里会间接调用ngx_clone_listening，来clone出 worker个数的listen句柄，但这时候因为还没有调用listen函数，所以ls[i]的fd是空，肯定不会走后面的listen函数的，因为环境变量已经把老的句柄传递过来了，直接复用即可，而且如果不复用，重新listen的话会出问题的，因为老的句柄在内核有queue，确没人accept。<br>那么是哪里为新的ngx_listening_t赋值的呢？就是在init_cycle的后面<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">for (n = 0; n &lt; cycle-&gt;listening.nelts; n++) &#123;</span><br><span class="line"></span><br><span class="line">    for (i = 0; i &lt; old_cycle-&gt;listening.nelts; i++) &#123;</span><br><span class="line">        if (ls[i].ignore) &#123;</span><br><span class="line">            continue;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if (ls[i].remain) &#123;</span><br><span class="line">            continue;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if (ls[i].type != nls[n].type) &#123;</span><br><span class="line">            continue;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if (ngx_cmp_sockaddr(nls[n].sockaddr, nls[n].socklen,</span><br><span class="line">                             ls[i].sockaddr, ls[i].socklen, 1)</span><br><span class="line">            == NGX_OK)</span><br><span class="line">        &#123;</span><br><span class="line">            nls[n].fd = ls[i].fd;</span><br><span class="line">            nls[n].previous = &amp;ls[i];</span><br><span class="line">            ls[i].remain = 1;</span><br><span class="line"></span><br><span class="line">            if (ls[i].backlog != nls[n].backlog) &#123;</span><br><span class="line">                nls[n].listen = 1;</span><br><span class="line">            &#125;</span><br><span class="line">...................</span><br></pre></td></tr></table></figure><br>对比新的cycle和旧的cycle，如果监听的地址一样，就拿来复用，已经复用的remain会置为1，下一个相同地址的就不会复用了。比如老的cycle里因为reuseport，一个ip+80，开启了4个 listen句柄，新的也开启4个listen结构，在上面的二层循环里，就一次把这个4个句柄赋值给新的 ngx_listening_t的fd。</p>
+<p>这里的remain名字起的真是烂啊，我觉得叫copied/inherited都可以。</p>
+<h2 id="5-结论"><a href="#5-结论" class="headerlink" title="5.结论"></a>5.结论</h2><p>reuseport功能会给nginx的性能带来很大的提升。但是升级的时候由于老的master的延迟退出，会导致在老的master退出之前，性能骤降，这和本来的on the fly upgrade 风格实在是落差不小。<br>也许是我理解有误，知道的小伙伴可以mail我。qzzhou$126.com</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/05/04/nginx与reuseport/" data-id="cjq7qznad000ojmlocnhg85x5" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="ssl-RSA加密" class="article article-type-ssl" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/01/20/RSA加密/" class="article-date">
+  <time datetime="2017-01-20T08:31:21.000Z" itemprop="datePublished">2017-01-20</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2017/01/20/RSA加密/">RSA加密</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">#include&lt;stdio.h&gt;</span><br><span class="line">#include&lt;stdlib.h&gt;</span><br><span class="line">#include&lt;string.h&gt;</span><br><span class="line">#include&lt;openssl/rsa.h&gt;</span><br><span class="line">#include&lt;openssl/pem.h&gt;</span><br><span class="line">#include&lt;openssl/err.h&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">int base64_encode(char *in_str, int in_len, char *out_str)</span><br><span class="line">&#123;</span><br><span class="line">    BIO *b64, *bio;</span><br><span class="line">    BUF_MEM *bptr = NULL;</span><br><span class="line">    size_t size = 0;</span><br><span class="line"></span><br><span class="line">    if (in_str == NULL || out_str == NULL)</span><br><span class="line">        return -1;</span><br><span class="line"></span><br><span class="line">    b64 = BIO_new(BIO_f_base64());</span><br><span class="line">    bio = BIO_new(BIO_s_mem());</span><br><span class="line">    bio = BIO_push(b64, bio);</span><br><span class="line"></span><br><span class="line">    BIO_write(bio, in_str, in_len);</span><br><span class="line">    BIO_flush(bio);</span><br><span class="line"></span><br><span class="line">    BIO_get_mem_ptr(bio, &amp;bptr);</span><br><span class="line">    memcpy(out_str, bptr-&gt;data, bptr-&gt;length);</span><br><span class="line">    out_str[bptr-&gt;length] = &apos;\0&apos;;</span><br><span class="line">    size = bptr-&gt;length;</span><br><span class="line"></span><br><span class="line">    BIO_free_all(bio);</span><br><span class="line">    return size;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int base64_decode(char *in_str, int in_len, char *out_str)</span><br><span class="line">&#123;</span><br><span class="line">    BIO *b64, *bio;</span><br><span class="line">    BUF_MEM *bptr = NULL;</span><br><span class="line">    int counts;</span><br><span class="line">    int size = 0;</span><br><span class="line"></span><br><span class="line">    if (in_str == NULL || out_str == NULL)</span><br><span class="line">        return -1;</span><br><span class="line"></span><br><span class="line">    b64 = BIO_new(BIO_f_base64());</span><br><span class="line">    //BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);</span><br><span class="line"></span><br><span class="line">    bio = BIO_new_mem_buf(in_str, in_len);</span><br><span class="line">    bio = BIO_push(b64, bio);</span><br><span class="line"></span><br><span class="line">    size = BIO_read(bio, out_str, in_len);</span><br><span class="line">    out_str[size] = &apos;\0&apos;;</span><br><span class="line"></span><br><span class="line">    BIO_free_all(bio);</span><br><span class="line">    return size;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">int main(int argc, char** argv)</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    char data[3048];</span><br><span class="line">    char out[2048];</span><br><span class="line">    char data_base64_pre[3048];</span><br><span class="line">    char data_base64[3048];</span><br><span class="line">    char data_unbase64[3048];</span><br><span class="line"></span><br><span class="line">    char *pub_key_path = argv[1];</span><br><span class="line">    char *priv_key_path = argv[2];</span><br><span class="line">    char *data_path = argv[3];</span><br><span class="line">    RSA *pub_rsa;</span><br><span class="line">    RSA *priv_rsa;</span><br><span class="line">    FILE *file;</span><br><span class="line">    int flen,rsa_len;</span><br><span class="line">    int enc_len = 0;</span><br><span class="line">    int dec_len = 0;</span><br><span class="line">    int data_len = 0;</span><br><span class="line">    int data_unbase64_len = 0;</span><br><span class="line">    int data_base64_len = 0;</span><br><span class="line">    int data_base64_pre_len = 0;</span><br><span class="line"></span><br><span class="line">    char* enc_buf;</span><br><span class="line">    char* dec_buf;</span><br><span class="line"></span><br><span class="line">    BIO* bio_data;</span><br><span class="line"></span><br><span class="line">    BIO* bio;</span><br><span class="line">    BIO* bio_enc;</span><br><span class="line"></span><br><span class="line">    BIO* bio_64;</span><br><span class="line">    BUF_MEM *bptr;</span><br><span class="line"></span><br><span class="line">    if (argc != 4) &#123;</span><br><span class="line">        printf(&quot;\n usage:\n&quot;);</span><br><span class="line">        printf(&quot;\t %s pub_key_file priv_key_file data_file\n&quot;, argv[0]);</span><br><span class="line">        exit(0);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if((file=fopen(pub_key_path,&quot;r&quot;))==NULL)&#123;</span><br><span class="line">        perror(&quot;open public key file error&quot;);</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line">    if((pub_rsa=PEM_read_RSA_PUBKEY(file,NULL,NULL,NULL))==NULL)&#123;</span><br><span class="line">        ERR_print_errors_fp(stdout);</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line">    fclose(file);</span><br><span class="line"></span><br><span class="line">    if((file=fopen(priv_key_path,&quot;r&quot;))==NULL)&#123;</span><br><span class="line">        perror(&quot;open private key file error&quot;);</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line">    if((priv_rsa=PEM_read_RSAPrivateKey(file,NULL,NULL,NULL))==NULL)&#123;</span><br><span class="line">        ERR_print_errors_fp(stdout);</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line">    fclose(file);</span><br><span class="line"></span><br><span class="line">    bzero(data, sizeof(data));</span><br><span class="line">    if((file=fopen(data_path,&quot;r&quot;))==NULL)&#123;</span><br><span class="line">        perror(&quot;open private key file error&quot;);</span><br><span class="line">        return NULL;</span><br><span class="line">    &#125;</span><br><span class="line">    data_len = fread(data, 1, sizeof(data), file);</span><br><span class="line">    printf(&quot;read data length:%d\n&quot;, data_len);</span><br><span class="line">    fclose(file);</span><br><span class="line"></span><br><span class="line">        bio = BIO_new(BIO_s_mem());</span><br><span class="line">        BIO_write(bio, data, data_len);</span><br><span class="line"></span><br><span class="line">        bio_enc = BIO_new(BIO_s_mem());</span><br><span class="line"></span><br><span class="line">        rsa_len = RSA_size(pub_rsa);</span><br><span class="line">        //printf(&quot;pub rsa size:%d\n&quot;, rsa_len);</span><br><span class="line">        enc_buf = malloc(rsa_len);</span><br><span class="line">        while(1) &#123;</span><br><span class="line">            char data[100];</span><br><span class="line">            int data_len = BIO_read(bio, data, sizeof(data));</span><br><span class="line">            // printf(&quot;read bytes:%d\n&quot;, data_len);</span><br><span class="line">            if (data_len &lt;= 0) &#123;</span><br><span class="line">                break;</span><br><span class="line">            &#125;</span><br><span class="line">            bzero(enc_buf, rsa_len);</span><br><span class="line">            enc_len = RSA_public_encrypt(data_len, data, enc_buf, pub_rsa, RSA_PKCS1_PADDING);</span><br><span class="line">            //printf(&quot;encoded length:%d\n&quot;, enc_len);</span><br><span class="line">            BIO_write(bio_enc, enc_buf, enc_len);</span><br><span class="line">        &#125;</span><br><span class="line">        BIO_free(bio);</span><br><span class="line">        BIO_flush(bio_enc);</span><br><span class="line"></span><br><span class="line">        // all the data has been encript</span><br><span class="line">        BIO_get_mem_ptr(bio_enc, &amp;bptr);</span><br><span class="line">        memcpy(data_base64_pre, bptr-&gt;data, bptr-&gt;length);</span><br><span class="line">        data_base64_pre_len = bptr-&gt;length;</span><br><span class="line"></span><br><span class="line">        BIO_free(bio_enc);</span><br><span class="line"></span><br><span class="line">        //printf(&quot;length after encoded:%d\n&quot;, data_len);</span><br><span class="line">        //now base64 encode</span><br><span class="line">        data_base64_len = base64_encode(data_base64_pre, data_base64_pre_len, data_base64);</span><br><span class="line">        //printf(&quot;data length after base64 encode:%d\n&quot;, data_base64_len);</span><br><span class="line">        // printf(&quot;data content after base64 encode:\n%s\n&quot;, data_base64);</span><br><span class="line">    int i = 0;</span><br><span class="line">    for(i=0;i&lt;1000;i++)</span><br><span class="line">    &#123;</span><br><span class="line">        // now decript</span><br><span class="line">        data_unbase64_len = base64_decode(data_base64, data_base64_len, data_unbase64);</span><br><span class="line">        //printf(&quot;data length after base64 decode:%d\n&quot;, data_base64_len);</span><br><span class="line">        //printf(&quot;data content after base64 decode:%s\n&quot;, data_unbase64);</span><br><span class="line"></span><br><span class="line">        //printf(&quot;base64 decode length:%d\n&quot;, data_unbase64_len);</span><br><span class="line">        bio_64 = BIO_new(BIO_s_mem());</span><br><span class="line">        BIO_write(bio_64, data_unbase64, data_base64_len);</span><br><span class="line"></span><br><span class="line">        dec_buf = malloc(rsa_len);</span><br><span class="line">        while(1) &#123;</span><br><span class="line">            dec_len = BIO_read(bio_64, dec_buf, rsa_len);</span><br><span class="line">            if(dec_len &lt;= 0) &#123;</span><br><span class="line">                break;</span><br><span class="line">            &#125;</span><br><span class="line">            bzero(out, sizeof(out));</span><br><span class="line">            dec_len = RSA_private_decrypt(dec_len, dec_buf, out, priv_rsa, RSA_PKCS1_PADDING);</span><br><span class="line">            //printf(&quot;%s&quot;, out);</span><br><span class="line">        &#125;</span><br><span class="line">        BIO_free(bio_64);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/01/20/RSA加密/" data-id="cjq7qzn9r0005jmloya4xqiub" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/openssl/">openssl</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-nginx进程架构" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/10/09/nginx进程架构/" class="article-date">
+  <time datetime="2016-10-09T02:53:33.000Z" itemprop="datePublished">2016-10-09</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/10/09/nginx进程架构/">nginx进程架构</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="1-概述"><a href="#1-概述" class="headerlink" title="1.概述"></a>1.概述</h1><p>nginx默认采用的是多进程的架构方式。和haproxy有很大的不同，haproxy作者是推荐使用但进程的方式的，因为作者认为单进程的性能能应付大部分的case。而且多进程会带来很复杂的管理面问题，所以也不得宠。<br>但nginx采用单master+多worker进程的架构方式，天然就是为了多进程服务。<br>很多人看nginx代码，都迫不及待的看什么样的io模型，怎么快速做的http解析和收发等数据平面的东西，但当面临使用的时候，管理面遇到的问题远远比数据面严重的多，比如我们要是在云环境中使用nginx为用户做负载均衡或者cdn/waf之类的，必然要考虑如下的问题</p>
+<ul>
+<li>如何做到横向扩展，比如一台机器启动多少进程？多加机器能解决性能问题么？</li>
+<li>m台机器，一台机器n个nginx进程，如何管理这些m*n个进程？比如加载新配置，比如重启死循环或者hang住的进程</li>
+<li>当升级重启的时候，如何做到真正的0宕机？</li>
+<li>m*n的nginx集群，他们的统计怎么搞？比如访问的top 10 域名是什么？</li>
+</ul>
+<p>master进程可以认为是管理平面的东西：</p>
+<ul>
+<li>加载/更新配置文件</li>
+<li>管理所有worker进程的创建，重启</li>
+</ul>
+<p>然后我们看一下nginx是如何管理worker进程和配置文件的更新的</p>
+<h1 id="2-关于worker进程的管理"><a href="#2-关于worker进程的管理" class="headerlink" title="2.关于worker进程的管理"></a>2.关于worker进程的管理</h1><p>worker进程是从master进程fork出来的进程，nginx提供了几种不同的fork方式：</p>
+<ul>
+<li>NGX_PROCESS_NORESPAWN</li>
+<li>NGX_PROCESS_JUST_SPAWN</li>
+<li>NGX_PROCESS_RESPAWN</li>
+<li>NGX_PROCESS_JUST_RESPAWN</li>
+<li>NGX_PROCESS_DETACHED</li>
+</ul>
+<p>我们一个一个理一下</p>
+<h2 id="2-1-NGX-PROCESS-RESPAWN"><a href="#2-1-NGX-PROCESS-RESPAWN" class="headerlink" title="2.1.NGX_PROCESS_RESPAWN"></a>2.1.NGX_PROCESS_RESPAWN</h2><p>这个是最常规的操作，fork worker进程的时候设置这个标志，当worker进程因为意外退出的时候，master进程会执行再生(respawn)操作。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">static ngx_uint_t</span><br><span class="line">ngx_reap_children(ngx_cycle_t *cycle)</span><br><span class="line">&#123;</span><br><span class="line">    //......</span><br><span class="line">    if (ngx_processes[i].exited) &#123;</span><br><span class="line">        //......</span><br><span class="line">        if (ngx_processes[i].respawn</span><br><span class="line">                &amp;&amp; !ngx_processes[i].exiting</span><br><span class="line">                &amp;&amp; !ngx_terminate</span><br><span class="line">                &amp;&amp; !ngx_quit)</span><br><span class="line">        &#123;</span><br><span class="line">            if (ngx_spawn_process(cycle, ngx_processes[i].proc,</span><br><span class="line">            //.....</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>所以可以认为初次启动master的时候（比如刚启动，比如更新二进制了）都用以这个参数启动worker</p>
+<h2 id="2-2-NGX-PROCESS-JUST-RESPAWN"><a href="#2-2-NGX-PROCESS-JUST-RESPAWN" class="headerlink" title="2.2.NGX_PROCESS_JUST_RESPAWN"></a>2.2.NGX_PROCESS_JUST_RESPAWN</h2><p>just是刚刚的意思，刚刚spawn出来的，用于更新配置的时候，因为更新配置执行如下的步骤<br>1.master加载新配置文件<br>2.fork新的worker进程<br>3.给使用旧配置文件的worker进程发QUIT信号</p>
+<p>第二步fork进程的时候腰加上NGX_PROCESS_JUST_RESPAWN这个标志，用于给第三步区分哪些是旧进程，哪些是新欢。</p>
+<h2 id="2-3-NGX-PROCESS-JUST-SPAWN"><a href="#2-3-NGX-PROCESS-JUST-SPAWN" class="headerlink" title="2.3.NGX_PROCESS_JUST_SPAWN"></a>2.3.NGX_PROCESS_JUST_SPAWN</h2><p>这个和上一个差不多，用于cache manager，我不喜欢</p>
+<p>这里注意一下，上面提到的3个类型，其实是转化成2个标志的，即respawn和just。<br>just:刚刚搞出来的，别动我，只动就的，用于区分新旧<br>respawn:本进程被master管理，死的时候可以自动拉起<br>spwawn由于前面没有re，只是fork出来就拉倒，所以JUST_SPAWN只有just是有含义的</p>
+<h2 id="2-4-NGX-PROCESS-DETACHED"><a href="#2-4-NGX-PROCESS-DETACHED" class="headerlink" title="2.4.NGX_PROCESS_DETACHED"></a>2.4.NGX_PROCESS_DETACHED</h2><p>这是说fork出来的进程和父进程没有管理的关系，比如nginx的master升级（老版本有bug），新的master从旧的mastr fork出来，就需要这样的标志，fork出来后和父进程没啥关系</p>
+<h2 id="2-5-NGX-PROCESS-NORESPAWN"><a href="#2-5-NGX-PROCESS-NORESPAWN" class="headerlink" title="2.5.NGX_PROCESS_NORESPAWN"></a>2.5.NGX_PROCESS_NORESPAWN</h2><p>cache loader会用到，当第一次启动的时候，使用NGX_PROCESS_NORESPAWN，就是启动一个进程执行ngx_cache_manager_process_cycle.但需要注意和上面的DETACHED的区别，因为在nginx里，一般父子进程都有很多管道通讯，只有DETACHED的模式下没有pipe通讯，这个NORESPAWN是保留了和父进程的管道通讯的</p>
+<p>但是当重新加载配置的时候，还是继续使用NGX_PROCESS_JUST_SPAWN来区分新欢旧爱的</p>
+<h1 id="3-关于配置文件的加载过程"><a href="#3-关于配置文件的加载过程" class="headerlink" title="3.关于配置文件的加载过程"></a>3.关于配置文件的加载过程</h1><p>修改完配置文件后，通过如下的步骤让配置文件生效</p>
+<ul>
+<li>给master进程发送HUP信号</li>
+</ul>
+<p>master收到信号后会设置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_reconfigure = 1;</span><br></pre></td></tr></table></figure>
+<p>然后下个周期检查ngx_reconfigure，调用ngx_init_cycle重新解析配置文件，生成一个cycle，注意一个cycle可以理解对应一个配置文件的周期。<br>在ngx_init_cycle里会做一些listner的bind和unbind操作，即旧的listener和新的listener的merge，当然还有其他配置的merge。</p>
+<ul>
+<li>fork worker进程</li>
+</ul>
+<p>worker进程里当然会能访问前面的cycle对象</p>
+<ul>
+<li>给所有旧的worker发送NGX_SHUTDOWN_SIGNAL信号</li>
+</ul>
+<p>旧的worker进程收到后，会关闭listen socket，然后等所有连接断开后，进程退出。</p>
+<h1 id="4-关于二进制的升级"><a href="#4-关于二进制的升级" class="headerlink" title="4.关于二进制的升级"></a>4.关于二进制的升级</h1><p>写代码难免有bug，有bug就得改，改了后想生效就得升级。</p>
+<p>给master发送一个USR2信号，ngx_change_binary会设置为1.<br>然后在那个ngx_init_cycle里，master进程会fork进程执行新的二进制（ngx_execute_proc）<br>ngx_new_binary会赋值为新master的进程id。<br>master起来后就是全新的master，会自动拉起新的worker进程，注意老master和新master都监听相同的listen socket，因为是fork出来执行execv的所以一样，nginx的listen socket的merger是它的killer feature。</p>
+<p>这时候2套master和worker进程都在了，然后给旧的master发送WINCH信号,master会给worker发送graceful shutdown通知<br>这样就剩下旧的master+新的master+新的worker了，<br>为啥要留着旧的master呢？因为怕新的二进制有问题，如果有问题的话，</p>
+<ul>
+<li>发送HUP给旧的master，旧的worker就起来了</li>
+<li>发送TERM给新的master，刚来起来的worker就被干掉了</li>
+</ul>
+<!-- 多说评论框 start -->
+<pre><code>&lt;div class=&quot;ds-thread&quot; data-thread-key=&quot;nginx_1&quot; data-title=&quot;nginx进程架构&quot; data-url=&quot;&quot;&gt;&lt;/div&gt;
+</code></pre><!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<p><script type="text/javascript"><br>var duoshuoQuery = {short_name:”abonege”};<br>    (function() {<br>        var ds = document.createElement(‘script’);<br>        ds.type = ‘text/javascript’;ds.async = true;<br>        ds.src = (document.location.protocol == ‘https:’ ? ‘https:’ : ‘http:’) + ‘//static.duoshuo.com/embed.js’;<br>        ds.charset = ‘UTF-8’;<br>        (document.getElementsByTagName(‘head’)[0]<br>         || document.getElementsByTagName(‘body’)[0]).appendChild(ds);<br>    })();<br>    </script><br><!-- 多说公共JS代码 end --></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/10/09/nginx进程架构/" data-id="cjq7qznah000vjmlouw45uhgr" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-关于代码优化" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/08/21/关于代码优化/" class="article-date">
+  <time datetime="2016-08-21T03:30:51.000Z" itemprop="datePublished">2016-08-21</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/08/21/关于代码优化/">关于代码优化</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>我们在做c coding的时候，如何才能才能更高效的呢？</p>
+<h2 id="1-读写数据尽量分开"><a href="#1-读写数据尽量分开" class="headerlink" title="1.读写数据尽量分开"></a>1.读写数据尽量分开</h2><p>因为CPU在执行内存指令的时候，是以cache line为单位夹在的，比如32或64个字节。<br>如果读写交叉，很容易造成cache line频繁失效</p>
+<h2 id="2-局部变量到底是好是坏，太大了是否可以？"><a href="#2-局部变量到底是好是坏，太大了是否可以？" class="headerlink" title="2.局部变量到底是好是坏，太大了是否可以？"></a>2.局部变量到底是好是坏，太大了是否可以？</h2><p>每次夹在函数栈上的东西都要入cache</p>
+<h2 id="3-减少code-path，检查不必要的调用"><a href="#3-减少code-path，检查不必要的调用" class="headerlink" title="3.减少code path，检查不必要的调用"></a>3.减少code path，检查不必要的调用</h2><h2 id="4-频繁调用-相关联的函数聚集到一起，一次型夹在到cpu-cache"><a href="#4-频繁调用-相关联的函数聚集到一起，一次型夹在到cpu-cache" class="headerlink" title="4.频繁调用/相关联的函数聚集到一起，一次型夹在到cpu cache"></a>4.频繁调用/相关联的函数聚集到一起，一次型夹在到cpu cache</h2><h2 id="5-数据结构的cache-line对其"><a href="#5-数据结构的cache-line对其" class="headerlink" title="5.数据结构的cache line对其"></a>5.数据结构的cache line对其</h2><p>如果是64 bit的cache line，就让首地址%64 =0</p>
+<h2 id="6-参数不能太多，否则参数寄存器就不够用了"><a href="#6-参数不能太多，否则参数寄存器就不够用了" class="headerlink" title="6.参数不能太多，否则参数寄存器就不够用了"></a>6.参数不能太多，否则参数寄存器就不够用了</h2><h2 id="7-延迟计算，需要的时候才计算"><a href="#7-延迟计算，需要的时候才计算" class="headerlink" title="7. 延迟计算，需要的时候才计算"></a>7. 延迟计算，需要的时候才计算</h2><h2 id="8-提前计算-复用结果"><a href="#8-提前计算-复用结果" class="headerlink" title="8.提前计算+复用结果"></a>8.提前计算+复用结果</h2><h2 id="9-per-CPU-变量"><a href="#9-per-CPU-变量" class="headerlink" title="9. per-CPU 变量"></a>9. per-CPU 变量</h2><h2 id="10-分支预测likely-unlikely"><a href="#10-分支预测likely-unlikely" class="headerlink" title="10.分支预测likely unlikely"></a>10.分支预测likely unlikely</h2><h2 id="11-进程切换会刷tlb，cr3寄存器"><a href="#11-进程切换会刷tlb，cr3寄存器" class="headerlink" title="11.进程切换会刷tlb，cr3寄存器"></a>11.进程切换会刷tlb，cr3寄存器</h2><h2 id="12-如何调试coredump"><a href="#12-如何调试coredump" class="headerlink" title="12.如何调试coredump"></a>12.如何调试coredump</h2><p>1.根据栈信息<br>2.根据挂的地址信息和nm出来的结果对比<br>3.copy越界<br>4.非法地址访问，不存在/只读用来写等</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/08/21/关于代码优化/" data-id="cjq7qznaj000xjmlol5y6owoi" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-neutron资源添加属性" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/06/30/neutron资源添加属性/" class="article-date">
+  <time datetime="2016-06-30T07:14:15.000Z" itemprop="datePublished">2016-06-30</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/06/30/neutron资源添加属性/">neutron资源添加属性</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>理论上来说neutron client和neutron server是分离的，server端添加属性，client端无影响，只是show或不show而已，但有时候添加了属性，client用-c参数也show不出来。这时候一般是server添加属性的时候拉下地方了。</p>
+<p>举例firewall来阐述一下添加属性步骤如下：</p>
+<ul>
+<li>数据库增加一列attr_new</li>
+</ul>
+<p>这步比较简单，轻松搞定</p>
+<ul>
+<li>修改Firewall对象，增加一列，在firewall_db.py里</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">class Firewall(model_base.BASEV2, models_v2.HasId, models_v2.HasTenant):</span><br><span class="line">    &quot;&quot;&quot;Represents a Firewall resource.&quot;&quot;&quot;</span><br><span class="line">    __tablename__ = &apos;firewalls&apos;</span><br><span class="line">    name = sa.Column(sa.String(255))</span><br><span class="line">    description = sa.Column(sa.String(1024))</span><br><span class="line">    shared = sa.Column(sa.Boolean)</span><br><span class="line">    admin_state_up = sa.Column(sa.Boolean)</span><br><span class="line">    status = sa.Column(sa.String(16))</span><br><span class="line">    firewall_policy_id = sa.Column(sa.String(36),</span><br><span class="line">                                   sa.ForeignKey(&apos;firewall_policies.id&apos;),</span><br><span class="line">                                   nullable=True)</span><br><span class="line">    creator = sa.Column(sa.String(255))</span><br><span class="line">    attr_new = sa.Column(sa.String(255))   # new attribute</span><br></pre></td></tr></table></figure>
+<ul>
+<li>修改show的地方即，get_firewalls函数,其实主要是函数_make_firewall_dict</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">def _make_firewall_dict(self, fw, fields=None):</span><br><span class="line">    res = &#123;&apos;id&apos;: fw[&apos;id&apos;],</span><br><span class="line">           &apos;tenant_id&apos;: fw[&apos;tenant_id&apos;],</span><br><span class="line">           &apos;name&apos;: fw[&apos;name&apos;],</span><br><span class="line">           &apos;description&apos;: fw[&apos;description&apos;],</span><br><span class="line">           &apos;shared&apos;: fw[&apos;shared&apos;],</span><br><span class="line">           &apos;admin_state_up&apos;: fw[&apos;admin_state_up&apos;],</span><br><span class="line">           &apos;status&apos;: fw[&apos;status&apos;],</span><br><span class="line">           &apos;firewall_policy_id&apos;: fw[&apos;firewall_policy_id&apos;],</span><br><span class="line">           &apos;creator&apos;: fw[&apos;creator&apos;]</span><br><span class="line">           &apos;attr_new&apos;: fw[&apos;attr_new&apos;]&#125;</span><br><span class="line">    return self._fields(res, fields)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>别以为完事了，最重要的是修改plugin的RESOURCE_ATTRIBUTE_MAP，这个是每个plugin/service给api的接口，来介绍自己的属性列表</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&apos;firewalls&apos;: &#123;</span><br><span class="line">    &apos;id&apos;: &#123;&apos;allow_post&apos;: False, &apos;allow_put&apos;: False,</span><br><span class="line">           &apos;validate&apos;: &#123;&apos;type:uuid&apos;: None&#125;,</span><br><span class="line">           &apos;is_visible&apos;: True,</span><br><span class="line">           &apos;primary_key&apos;: True&#125;,</span><br><span class="line">    &apos;tenant_id&apos;: &#123;&apos;allow_post&apos;: True, &apos;allow_put&apos;: False,</span><br><span class="line">                  &apos;required_by_policy&apos;: True,</span><br><span class="line">                  &apos;is_visible&apos;: True&#125;,</span><br><span class="line">    &apos;name&apos;: &#123;&apos;allow_post&apos;: True, &apos;allow_put&apos;: True,</span><br><span class="line">             &apos;validate&apos;: &#123;&apos;type:string&apos;: None&#125;,</span><br><span class="line">    &apos;attr_new&apos;: &#123;&apos;allow_post&apos;: True, &apos;allow_put&apos;: True,</span><br><span class="line">             &apos;validate&apos;: &#123;&apos;type:string&apos;: None&#125;,</span><br></pre></td></tr></table></figure>
+<p>好了，大功告成</p>
+<p>如果想用neutron client自动show firewall的新属性 则</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">25 class ListFirewall(neutronv20.ListCommand):</span><br><span class="line">26     &quot;&quot;&quot;List firewalls that belong to a given tenant.&quot;&quot;&quot;</span><br><span class="line">27</span><br><span class="line">28     resource = &apos;firewall&apos;</span><br><span class="line">29     list_columns = [&apos;id&apos;, &apos;name&apos;, &apos;firewall_policy_id&apos;, &apos;attr_new&apos;]</span><br><span class="line">30     _formatters = &#123;&#125;</span><br><span class="line">31     pagination_support = True</span><br><span class="line">32     sorting_support = True</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/06/30/neutron资源添加属性/" data-id="cjq7qzna7000gjmloj10g1401" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-创建资源后如何通知agent" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/06/27/创建资源后如何通知agent/" class="article-date">
+  <time datetime="2016-06-27T03:05:55.000Z" itemprop="datePublished">2016-06-27</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/06/27/创建资源后如何通知agent/">创建资源后如何通知agent</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>当一个subnet创建后，需要通知dhcp-agent等,比如subnet_delete，subnet_create等，这个notify是什么时候发的呢，原来在API的Controller里<br><figure class="highlight plain"><figcaption><span>[python]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">def delete(self, request, id, **kwargs):</span><br><span class="line">    &quot;&quot;&quot;Deletes the specified entity.&quot;&quot;&quot;</span><br><span class="line">    notifier_api.notify(request.context,</span><br><span class="line">                        self._publisher_id,</span><br><span class="line">                        self._resource + &apos;.delete.start&apos;,</span><br><span class="line">                        notifier_api.CONF.default_notification_level,</span><br><span class="line">                        &#123;self._resource + &apos;_id&apos;: id&#125;)</span><br><span class="line">    action = self._plugin_handlers[self.DELETE]</span><br><span class="line"></span><br><span class="line">    # Check authz</span><br><span class="line">    parent_id = kwargs.get(self._parent_id_name)</span><br><span class="line">    obj = self._item(request, id, parent_id=parent_id)</span><br><span class="line">    try:</span><br><span class="line">        policy.enforce(request.context,</span><br><span class="line">                       action,</span><br><span class="line">                       obj,</span><br><span class="line">                       resource=id)</span><br><span class="line">    except exceptions.PolicyNotAuthorized as err:</span><br><span class="line">        # To avoid giving away information, pretend that it</span><br><span class="line">        # doesn&apos;t exist</span><br><span class="line">        raise webob.exc.HTTPForbidden(explanation=err.msg)</span><br><span class="line"></span><br><span class="line">    obj_deleter = getattr(self._plugin, action)</span><br><span class="line">    obj_deleter(request.context, id, **kwargs)</span><br><span class="line">    notifier_method = self._resource + &apos;.delete.end&apos;</span><br><span class="line">    notifier_api.notify(request.context,</span><br><span class="line">                        self._publisher_id,</span><br><span class="line">                        notifier_method,</span><br><span class="line">                        notifier_api.CONF.default_notification_level,</span><br><span class="line">                        &#123;self._resource + &apos;_id&apos;: id&#125;)</span><br><span class="line">    result = &#123;self._resource: self._view(request.context, obj)&#125;</span><br><span class="line">    self._nova_notifier.send_network_change(action, &#123;&#125;, result)</span><br><span class="line">    self._send_dhcp_notification(request.context,</span><br><span class="line">                                 result,</span><br><span class="line">                                 notifier_method)  &lt;----------</span><br></pre></td></tr></table></figure></p>
+<p>代码里经常看到<br>create_XXX_precommit<br>create_XXX_postcommit<br>这样的函数，我以为是通知agent的呢，但看了子网的这2个家伙，发现只是通知driver而已，通知agent是由上面的notifyer完成的，可以看下面的log</p>
+<p>&lt;% codeblock %&gt;<br>2016-06-27 12:00:55.725 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######3:&lt;stevedore.extension.Extension object at 0x4b85c90&gt;<br>2016-06-27 12:00:55.736 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######4:<class 'stevedore.extension.extension'=""><br>2016-06-27 12:00:55.736 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######5:(&lt;bound method BareMetalMechanismDriver.delete_subnet_postc<br>ommit of &lt;neutron.plugins.ml2.drivers.mech_baremetal.BareMetalMechanismDriver object at 0x3a42610&gt;&gt;,)<br>2016-06-27 12:00:55.737 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######6:<type 'instancemethod'=""><br>2016-06-27 12:00:55.738 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######3:&lt;stevedore.extension.Extension object at 0x492fc50&gt;<br>2016-06-27 12:00:55.749 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######4:<class 'stevedore.extension.extension'=""><br>2016-06-27 12:00:55.750 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######5:(&lt;bound method OpenvswitchMechanismDriver.delete_subnet_pos<br>tcommit of &lt;neutron.plugins.ml2.drivers.mech_openvswitch.OpenvswitchMechanismDriver object at 0x3a42d50&gt;&gt;,)<br>2016-06-27 12:00:55.750 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######6:<type 'instancemethod'=""><br>2016-06-27 12:00:55.751 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######3:&lt;stevedore.extension.Extension object at 0x492fc50&gt;<br>2016-06-27 12:00:55.762 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######4:<class 'stevedore.extension.extension'=""><br>2016-06-27 12:00:55.763 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######5:(&lt;bound method L2populationMechanismDriver.delete_subnet_po<br>stcommit of &lt;neutron.plugins.ml2.drivers.l2pop.mech_driver.L2populationMechanismDriver object at 0x3a429d0&gt;&gt;,)<br>2016-06-27 12:00:55.763 14997 ERROR neutron.plugins.ml2.managers [req-1df986e6-3df2-4125-b555-e29ab7df384c None] #######6:<type 'instancemethod'=""></type></class></type></class></type></class></p>
+<p>&lt;% endcodeblock %&gt;</p>
+<p>另外一个有意思的细节是network什么时候schedule的呢，就是第一个create_port的时候，<br>Controller在收到发送port_create_end消息的时候，会调用DhcpAgentNotifyAPI的notify<br>这里的notify就很特殊处理了，不会傻乎乎的直接notify<br>如果是port_create_end消息，先做schedule，然后才发送消息。<br>也就是之前虽然有network_create_end, subnet_create_end之类的消息，基本没啥用</p>
+<p>&lt;% codeblock %&gt;</p>
+<pre><code># schedule the network first, if needed
+schedule_required = method == &apos;port_create_end&apos;
+if schedule_required:
+    agents = self._schedule_network(admin_ctx, network, agents)
+
+enabled_agents = self._get_enabled_agents(
+    context, network, agents, method, payload)
+for agent in enabled_agents:
+    self._cast_message(
+        context, method, payload, agent.host, agent.topic)
+</code></pre><p>&lt;% endcodeblock %&gt;</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/06/27/创建资源后如何通知agent/" data-id="cjq7qznam0015jmlo3n9cljgm" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-emacs显示行尾空格" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/06/24/emacs显示行尾空格/" class="article-date">
+  <time datetime="2016-06-24T08:13:01.000Z" itemprop="datePublished">2016-06-24</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/06/24/emacs显示行尾空格/">emacs显示行尾空格</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>emacs写python的时候，行尾的空格能显示还是很不错的，找了好几个插件,blankmode,whitespce啥的，后来发现一个简单的highlight-chars.el就能搞定。<br>主页：<a href="https://www.emacswiki.org/emacs/highlight-chars.el" target="_blank" rel="noopener">https://www.emacswiki.org/emacs/highlight-chars.el</a><br>.emacs里添加<br><code><br>(require ‘highlight-chars)<br>(hc-toggle-highlight-trailing-whitespace)<br></code></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/06/24/emacs显示行尾空格/" data-id="cjq7qzna1000bjmlol3zdm77s" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/emacs/">emacs</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-删除子网的时候DHCP的变化" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/06/08/删除子网的时候DHCP的变化/" class="article-date">
+  <time datetime="2016-06-08T03:32:27.000Z" itemprop="datePublished">2016-06-08</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/06/08/删除子网的时候DHCP的变化/">删除子网的时候DHCP的变化</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>我们通常知道的答案是当删除子网的时候会会回调dhcp-agent的<code>subnet_delete_end</code>函数。然后调用driver的<code>restart</code>来重新加载dnsmasq进程，但今天我想说一点细节的东西。</p>
+<p>##细节一：什么时候把一个网络分发到一个agent上去，</p>
+<p>当第一个DHCP port创建后，会做2个件事情</p>
+<ul>
+<li>为这个network schedule到一个agent上去</li>
+<li>给所有个agent发送消息比如port_create_end</li>
+</ul>
+<p>所以一个有意思的流程是，当一个subnet创建后，并不一定会通知dhcp_agent，因为要考虑这时候dhcp-port有没有创建，如果没有创建的话，说明连dhcp-agent也没有呢，自然不需要notify<br>那么什么时候创建dhcp-port呢？当一个subnet通过router-interface-add添加一个port的时候，就会触发dhcp-port的创建。然后schedule agent，<br>然后后续的subnet都会通知这些dhcp agents了</p>
+<p>&lt;% codeblock %&gt;<br>    def add_router_interface(self, context, router_id, interface_info):<br>        add_by_port, add_by_sub = self._validate_interface_info(interface_info)<br>        device_owner = self._get_device_owner(context, router_id)</p>
+<pre><code>if add_by_port:
+    port = self._add_interface_by_port(
+        context, router_id, interface_info[&apos;port_id&apos;], device_owner)
+elif add_by_sub:
+    port = self._add_interface_by_subnet(
+        context, router_id, interface_info[&apos;subnet_id&apos;], device_owner)
+    super(L3_NAT_db_mixin, self).send_dhcp_notification(
+        context, {&apos;port&apos;: port}, &apos;port.create.end&apos;) 
+</code></pre><p>&lt;% endcodeblock %&gt;</p>
+<p>所以会发送一个创建port的指令，然后会schedule一个agent来负责这个network，然后agent会做如下操作：</p>
+<ul>
+<li>拉subnet数据到agent</li>
+<li>创建dhcp_port（实际上是从neutron server获得分配给本dhcp port的信息，比如ip mac啥的，实际还是在本地创建）</li>
+</ul>
+<p>之后再创建subnet就会notify 这个agent了。</p>
+<p>##细节二：DHCP Port上的IP什么时候删除的</p>
+<p>当port/subnet有更新的时候，会走restart流程，然后</p>
+<ul>
+<li>拉新的network数据</li>
+<li><p>重建dhcp_port，一般调用update_dhcp_port，然后重新设置ip网关之类的<br>&lt;% codeblock %&gt;<br>  def setup(self, network, reuse_existing=False):</p>
+<pre><code>&quot;&quot;&quot;Create and initialize a device for network&apos;s DHCP on this host.&quot;&quot;&quot;
+port = self.setup_dhcp_port(network)
+interface_name = self.get_interface_name(network, port)
+
+if ip_lib.device_exists(interface_name,
+                        self.root_helper,
+                        network.namespace):
+    if not reuse_existing:
+        raise exceptions.PreexistingDeviceFailure(
+            dev_name=interface_name)
+
+    LOG.debug(_(&apos;Reusing existing device: %s.&apos;), interface_name)
+else:
+    self.driver.plug(network.id,
+                     port.id,
+                     interface_name,
+                     port.mac_address,
+                     namespace=network.namespace)
+
+ip_cidrs = []
+for fixed_ip in port.fixed_ips:
+    subnet = fixed_ip.subnet
+    net = netaddr.IPNetwork(subnet.cidr)
+    ip_cidr = &apos;%s/%s&apos; % (fixed_ip.ip_address, net.prefixlen)
+    ip_cidrs.append(ip_cidr)
+
+if (self.conf.enable_isolated_metadata and
+    self.conf.use_namespaces):
+    ip_cidrs.append(METADATA_DEFAULT_CIDR)
+
+self.driver.init_l3(interface_name, ip_cidrs,
+                    namespace=network.namespace)
+
+# ensure that the dhcp interface is first in the list
+if network.namespace is None:
+    device = ip_lib.IPDevice(interface_name,
+                             self.root_helper)
+    device.route.pullup_route(interface_name)
+
+if self.conf.use_namespaces:
+    self._set_default_route(network, port=port)
+return interface_name
+</code></pre></li>
+</ul>
+<p>&lt;% endcodeblock %&gt;</p>
+<p>##细节二：在Neutron Server上，那个子网的IP什么时候删除的</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/06/08/删除子网的时候DHCP的变化/" data-id="cjq7qznap001bjmlol293rjv7" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-Neutron中的流表" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/06/01/Neutron中的流表/" class="article-date">
+  <time datetime="2016-06-01T06:17:13.000Z" itemprop="datePublished">2016-06-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/06/01/Neutron中的流表/">Neutron中的流表</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="br-int-br-tun"><a href="#br-int-br-tun" class="headerlink" title="br-int, br-tun"></a>br-int, br-tun</h2><p>br-int是一个ovs桥，不是linux bridge，这个ovs桥把本计算节点上的所有vm的port连接上，那怎么才能让这些不同租户的port不互相干扰呢，就是用vlan，每个租户分配不同的vlan tag。</p>
+<p>br-tun是用于东西流量的，比如一个租户的计算节点1上的虚拟机，为了和计算节点2上的虚拟机通讯，两者之间就会建一个tunnel。<br>那么一个计算借点会有多少个tunnel呢？就是看这个节点上的虚机和多少个计算节点上的续集有联系，最差的情况就是：如果有N计算几点，就有N-1个tunnel（网络节点另算）</p>
+<h2 id="neutron里的flow-table"><a href="#neutron里的flow-table" class="headerlink" title="neutron里的flow table"></a>neutron里的flow table</h2><p>为了使逻辑更加清晰，在neutron中，flow table使用了多个table来分别控制不同的flow<br><figure class="highlight plain"><figcaption><span>[neutron/plugins/ml2/drivers/openvswitch/agent/common/constants.py]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">PATCH_LV_TO_TUN = 1</span><br><span class="line">GRE_TUN_TO_LV = 2</span><br><span class="line">VXLAN_TUN_TO_LV = 3</span><br><span class="line">LEARN_FROM_TUN = 10</span><br><span class="line">UCAST_TO_TUN = 20</span><br><span class="line">FLOOD_TO_TUN = 21</span><br><span class="line">ARP_RESPONDER = 22</span><br><span class="line"></span><br><span class="line">CANARY_TABLE = 128</span><br></pre></td></tr></table></figure></p>
+<p>当一个port创建的时候，会在context里设置<strong>init_flag = True.</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">if context.init_flag:</span><br><span class="line">    need_notify_agent_port_at = True</span><br><span class="line">    need_pop_flooding_entry = True</span><br></pre></td></tr></table></figure></p>
+<p>设置了need_pop_flooding_entry的用途是啥呢？<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># Notify other agents to add fdb rule for current port</span><br><span class="line">if need_pop_flooding_entry:</span><br><span class="line">    # And notify other agents to add flooding entry</span><br><span class="line">    other_fdb_entries[network_id][&apos;ports&apos;][agent_ip].append(</span><br><span class="line">        const.FLOODING_ENTRY)</span><br></pre></td></tr></table></figure><br>这样就会向该网络的所有port所在的ovs-agent广播一下，广播的结果是，在这些ovs-agent所在的机器上，加入一条flow table，<br>当这个netwwrk有广播包的时候，给我一份，比如响应arp啥的。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/06/01/Neutron中的流表/" data-id="cjq7qzn9e0000jmloechcz16x" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+
+
+  <nav id="page-nav">
+    
+    <a class="extend prev" rel="prev" href="/">&laquo; 上一页</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">下一页 &raquo;</a>
+  </nav>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">分类</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/生活/">生活</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/26/理解字节序/">理解字节序</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/14/a-out的幕后/">a.out的幕后</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
+          </li>
+        
+          <li>
+            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
+          </li>
+        
+          <li>
+            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 abonege<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
