@@ -16,7 +16,7 @@
 <meta property="og:description" content="为了支持模块化，nginx的配置管理，采用了及其复杂的方式，本文就和大家分享一下，nginx是怎么进程配置管理的。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="http://abonege.github.io/2017/05/10/nginx的配置管理/nginx_conf.jpg">
-<meta property="og:updated_time" content="2018-10-11T09:12:42.336Z">
+<meta property="og:updated_time" content="2019-04-17T09:06:43.071Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="nginx的配置管理">
 <meta name="twitter:description" content="为了支持模块化，nginx的配置管理，采用了及其复杂的方式，本文就和大家分享一下，nginx是怎么进程配置管理的。">
@@ -98,12 +98,12 @@
 </ul>
 <p>当我们写nginx插件的时候，会定义指令可以配置在哪个返回，举access_log为例：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#123; ngx_string(&quot;access_log&quot;),</span><br><span class="line">     NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF</span><br><span class="line">                       |NGX_HTTP_LMT_CONF|NGX_CONF_1MORE,</span><br><span class="line">     ngx_http_log_set_log,</span><br><span class="line">     NGX_HTTP_LOC_CONF_OFFSET,</span><br><span class="line">     0,</span><br><span class="line">     NULL &#125;</span><br></pre></td></tr></table></figure></p>
 <p>可以看出，这个指令即可以配置在main段可以server段也可以location段。而pid指令就只能配置在main段里<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&#123; ngx_string(&quot;pid&quot;),</span><br><span class="line">     NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_TAKE1,</span><br><span class="line">     ngx_conf_set_str_slot,</span><br><span class="line">     0,</span><br><span class="line">     offsetof(ngx_core_conf_t, pid),</span><br><span class="line">     NULL &#125;,</span><br></pre></td></tr></table></figure></p>
-<p>在介绍实现之前，我们先李一个基本的规则，方便理解：</p>
+<p>在介绍实现之前，我们先理一个基本的规则，方便理解：</p>
 <ul>
 <li>main的实例只有一个，即全局的</li>
 <li>server实例有很多个，存在于main内</li>
 <li>location的实例有很多个，存在一个server内</li>
-<li>每个模块在每个实例里都有自己的conf（当然在在那个实例里有其指令）</li>
+<li>每个模块在可以有若干配置指令，指令的生效范围可以是前面的3个实例</li>
 </ul>
 <p>好，后面就是我们的重点了，模块的配置到底是如何保存在各个实例中的（main实例，server实例，以及location实例）</p>
 <h1 id="2-配置的管理"><a href="#2-配置的管理" class="headerlink" title="2.配置的管理"></a>2.配置的管理</h1><h2 id="2-1-模块的分类"><a href="#2-1-模块的分类" class="headerlink" title="2.1. 模块的分类"></a>2.1. 模块的分类</h2><p>nginx的模块，大致分两类吧，也许有别的，但我不关心</p>
@@ -113,11 +113,102 @@
 </ul>
 <p>core模块是最基础的模块，比如events模块,log模块，thread pool模块，http_core模块等，<br>HTTP模块是处理http时候使用的模块，我们增加的扩展大多属于这类模块。</p>
 <p>CORE模块是第一层级，HTTP模块是http_core模块的下一层。这和配置管理很有关系。</p>
-<h2 id="2-2-core模块的配置"><a href="#2-2-core模块的配置" class="headerlink" title="2.2. core模块的配置"></a>2.2. core模块的配置</h2><p>大家都知道nginx的配置，都保存在cycle-&gt;conf_ctx里，是一个void<em>**</em>类型，但为啥这么多层<em>，我现在仍不知情。<br>不过不影响我们看逻辑：他的第一层下标就是core模块的index，比如http_core模块的index是20，那么http_core模块对应的配置文件便是cycle-&gt;conf_ctx[20]，这样就脱调了一层</em>（我没看到哪里脱第二层和第三层）。</p>
-<p>每个core模块的类型都是不一样的。先看个简单的名字为core的module，只是用于保存是否daemon on啊，pid怎么记录啊，core文件大小等信息<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                daemon;</span><br><span class="line">    ngx_flag_t                master;</span><br><span class="line"></span><br><span class="line">    ngx_msec_t                timer_resolution;</span><br><span class="line"></span><br><span class="line">    ngx_int_t                 worker_processes;</span><br><span class="line">    ngx_int_t                 debug_points;</span><br><span class="line"></span><br><span class="line">    ngx_int_t                 rlimit_nofile;</span><br><span class="line">    off_t                     rlimit_core;</span><br><span class="line"></span><br><span class="line">    int                       priority;</span><br><span class="line"></span><br><span class="line">    ngx_uint_t                cpu_affinity_auto;</span><br><span class="line">    ngx_uint_t                cpu_affinity_n;</span><br><span class="line">    ngx_cpuset_t             *cpu_affinity;</span><br><span class="line"></span><br><span class="line">    char                     *username;</span><br><span class="line">    ngx_uid_t                 user;</span><br><span class="line">    ngx_gid_t                 group;</span><br><span class="line"></span><br><span class="line">    ngx_str_t                 working_directory;</span><br><span class="line">    ngx_str_t                 lock_file;</span><br><span class="line"></span><br><span class="line">    ngx_str_t                 pid;</span><br><span class="line">    ngx_str_t                 oldpid;</span><br><span class="line"></span><br><span class="line">    ngx_array_t               env;</span><br><span class="line">    char                    **environment;</span><br><span class="line">&#125; ngx_core_conf_t;</span><br></pre></td></tr></table></figure></p>
-<p>简单不是我们想要的，来个最复杂的，对于http_core模块来说，它的类型如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure></p>
+<h2 id="2-2-core模块的配置"><a href="#2-2-core模块的配置" class="headerlink" title="2.2. core模块的配置"></a>2.2. core模块的配置</h2><p>大家都知道nginx的配置，都保存在cycle-&gt;conf_ctx里，是一个void<em>**</em>类型，但为啥这么多层<em>，我现在仍不知情。<br>不过不影响我们看逻辑：他的第一层下标就是core模块的index，比如http_core模块的index是20，那么http_core模块对应的配置文件便是cycle-&gt;conf_ctx[20]，这样就脱调了一层</em>（我没看到哪里脱第二层和第三层）。<br>core 模块有这么几个</p>
+<ul>
+<li>ngx_core_module </li>
+<li>ngx_events_module</li>
+<li>ngx_openssl_module</li>
+<li>ngx_google_perftools_module</li>
+<li>ngx_http_module</li>
+<li>ngx_errlog_module</li>
+<li>ngx_mail_module</li>
+<li>ngx_regex_module</li>
+<li>ngx_stream_module</li>
+<li>ngx_thread_pool_module</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">变量名</th>
+<th style="text-align:left">模块名</th>
+<th style="text-align:left">配置文件类型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">ngx_core_module</td>
+<td style="text-align:left">core</td>
+<td style="text-align:left">ngx_core_conf_t</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_http_module</td>
+<td style="text-align:left">http</td>
+<td style="text-align:left">无</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_stream_module</td>
+<td style="text-align:left">stream</td>
+<td style="text-align:left">无</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_google_perftools_module</td>
+<td style="text-align:left">google_perftools</td>
+<td style="text-align:left">ngx_google_perftools_conf_t</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_events_module</td>
+<td style="text-align:left">events</td>
+<td style="text-align:left">无</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_errlog_module</td>
+<td style="text-align:left">errlog</td>
+<td style="text-align:left">无</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_mail_module</td>
+<td style="text-align:left">mail</td>
+<td style="text-align:left">无</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_regex_module</td>
+<td style="text-align:left">regex</td>
+<td style="text-align:left">ngx_regex_conf_t</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_openssl_module</td>
+<td style="text-align:left">openssl</td>
+<td style="text-align:left">ngx_openssl_conf_t</td>
+</tr>
+<tr>
+<td style="text-align:left">ngx_thread_pool_module</td>
+<td style="text-align:left">thread_pool</td>
+<td style="text-align:left">ngx_thread_pool_conf_t</td>
+</tr>
+</tbody>
+</table>
+<p>core module的定义如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_str_t             name;</span><br><span class="line">    void               *(*create_conf)(ngx_cycle_t *cycle);</span><br><span class="line">    char               *(*init_conf)(ngx_cycle_t *cycle, void *conf);</span><br><span class="line">&#125; ngx_core_module_t;</span><br></pre></td></tr></table></figure></p>
+<p>可以看出，有的是create_conf是有值的，比如mail/regex/thread_pool/core，其他的是没有的，为什么会有这样的分别呢?<br>我们可以看看core这个module得conf<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                daemon;</span><br><span class="line">    ngx_flag_t                master;</span><br><span class="line"></span><br><span class="line">    ngx_msec_t                timer_resolution;</span><br><span class="line"></span><br><span class="line">    ngx_int_t                 worker_processes;</span><br><span class="line">    ngx_int_t                 debug_points;</span><br><span class="line"></span><br><span class="line">    ngx_int_t                 rlimit_nofile;</span><br><span class="line">    off_t                     rlimit_core;</span><br><span class="line"></span><br><span class="line">    int                       priority;</span><br><span class="line"></span><br><span class="line">    ngx_uint_t                cpu_affinity_auto;</span><br><span class="line">    ngx_uint_t                cpu_affinity_n;</span><br><span class="line">    ngx_cpuset_t             *cpu_affinity;</span><br><span class="line"></span><br><span class="line">    char                     *username;</span><br><span class="line">    ngx_uid_t                 user;</span><br><span class="line">    ngx_gid_t                 group;</span><br><span class="line"></span><br><span class="line">    ngx_str_t                 working_directory;</span><br><span class="line">    ngx_str_t                 lock_file;</span><br><span class="line"></span><br><span class="line">    ngx_str_t                 pid;</span><br><span class="line">    ngx_str_t                 oldpid;</span><br><span class="line"></span><br><span class="line">    ngx_array_t               env;</span><br><span class="line">    char                    **environment;</span><br><span class="line">&#125; ngx_core_conf_t;</span><br></pre></td></tr></table></figure></p>
+<p>可以看出，里边都是一些全局的配置，比如是否daemon，pid等等。都很直接。</p>
+<p>那么为什么其他的模块，比如event/http/stream 都没有对应的conf呢？<br>因为http/stream 可以有多个，每个http和stream，还有其更细分的模块，不再是NGX_CORE_MODULE这个类型了。<br>比如：</p>
+<ul>
+<li>http有一个对应ngx_http_core_module，其类型为NGX_HTTP_MODULE</li>
+<li>stream有一个对应的ngx_stream_core_module，其类型为NGX_STREAM_MODULE</li>
+<li>event有一个对应的ngx_event_core_module，其对应的类型为NGX_EVENT_MODULE</li>
+</ul>
+<p>这里errlog是一个另类，欠一个债，后续补充</p>
+<p>对于一个新增的模块，一般需要写很一些配置命令，这些配置命令有的是通过set_slot的方式写入到main/svc/loc的配置conf中，有的是调用函数。<br>调用函数的格式一般这样</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">static char *</span><br><span class="line">ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)</span><br></pre></td></tr></table></figure>
+<p>cf和conf 是什么呢？这个对于理解配置文件解析是很重要的<br>先说ngx_conf_t，这个是本命令所在实例（main/srv/loc）的总体配置情况。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">struct ngx_conf_s &#123;</span><br><span class="line">    char                 *name;        //命令的名字</span><br><span class="line">    ngx_array_t          *args;        //命令的参数</span><br><span class="line"></span><br><span class="line">    ngx_cycle_t          *cycle;</span><br><span class="line">    ngx_pool_t           *pool;</span><br><span class="line">    ngx_pool_t           *temp_pool;</span><br><span class="line">    ngx_conf_file_t      *conf_file;</span><br><span class="line">    ngx_log_t            *log;</span><br><span class="line"></span><br><span class="line">    void                 *ctx;         // 最重要的部分</span><br><span class="line">    ngx_uint_t            module_type;</span><br><span class="line">    ngx_uint_t            cmd_type;</span><br><span class="line"></span><br><span class="line">    ngx_conf_handler_pt   handler;</span><br><span class="line">    void                 *handler_conf;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<p>ctx是最重要的部分，他是本command所在的实例的上下文信息，对于不通的模块，结构不太一样<br>对于http来讲，其为ngx_http_conf_ctx_t。在一个http{},sever{},location{}开始的时候，都会创建一个这样的变量，{}内的命令解析的时候的cf就是这个变量<br>对于event来讲，其为一个数组指针<br>对于stream来讲，是ngx_stream_conf_ctx_t</p>
+<p>那参数conf又是啥呢？在某个实例内，解析到某个命令的时候，conf是该命令所在模块在这个实例的配置。<br>比如listen命令定义如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&#123; ngx_string(&quot;listen&quot;),</span><br><span class="line">  NGX_HTTP_SRV_CONF|NGX_CONF_1MORE,</span><br><span class="line">  ngx_http_core_listen,</span><br><span class="line">  NGX_HTTP_SRV_CONF_OFFSET,</span><br><span class="line">  0,</span><br><span class="line">  NULL &#125;,</span><br></pre></td></tr></table></figure></p>
+<p>它定义在server内，模块为ngx_http_core_module，在初始化这个模块的时候，会调用ngx_http_core_create_srv_conf 创建ngx_http_core_srv_conf_t<br>所以对于listen命令来讲，其conf就是ngx_http_core_srv_conf_t</p>
+<p>总结一下，这样方式的好处就是在处理一个命令的时候，能方便的得到本模块在本实例的配置信息，也能得到本实例的其他模块的配置信息。</p>
+<p>对于ngx_http_module，只有一个命令，即 http, 所以每次遇到一个http {}这样的配置段，就会执行ngx_http_block函数<br>那么ngx_http_block到底执行力啥东西呢？<br>对于每个http{}段，都会对应一个ngx_http_conf_ctx_t类型的ctx变量。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">static char *</span><br><span class="line">ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)</span><br></pre></td></tr></table></figure></p>
+<p>创建的ctx变量会当成返回值赋值给参数conf，具体怎么用还不清楚。（这里推测conf和ngx_cycle里的<em>**</em>有关系）</p>
+<p>对于每个http{}block来说，都会创建一个ngx_http_conf_ctx_t类型的变量，用于存储各个http模块的ctx<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure></p>
 <p>抽象的不要不要的，这也是我们要着重说的部分啦</p>
-<h2 id="2-3-http-core的main"><a href="#2-3-http-core的main" class="headerlink" title="2.3 http_core的main"></a>2.3 http_core的main</h2><p>前面我们提到过，每个模块（此后我们说的都是http扩展模块哈）的指令可以定义在不同的范围生效，这里先介绍最简单的情况：在main里生效的情况。这也是最简单的情况了。这个和前面提到的core module的方式类似，是以数组的方式组织的，下标即http模块的下标。<br>从前面的代码，我们能从全局变量cycle-&gt;conf_ctx拿到http core模块的配置即</p>
+<h2 id="2-3-http-core的main"><a href="#2-3-http-core的main" class="headerlink" title="2.3 http_core的main"></a>2.3 http_core的main</h2><p>前面我们提到过，每个http模块的指令可以定义在不同的范围生效，这里先介绍最简单的情况：在main里生效的情况。这也是最简单的情况了。这个和前面提到的NGX_CORE_MODULE类型的模块类似，是以数组的方式组织的，下标即http模块的下标。<br>对于解析到一个http{}时候，会创建一个ctx，这个ctx就是下面的结构</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>main_conf,保留所有模块的main conf</li>
@@ -125,49 +216,40 @@
 </ul>
 <p>每个模块的main conf就保存在**main_conf里，比如access_log模块index是32，那么他的main conf就是：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">((ngx_http_conf_ctx_t*)(cycle-&gt;conf_ctx[http_core_module_index]))-&gt;main_conf[32];</span><br></pre></td></tr></table></figure>
-<h2 id="2-4-http-core的server"><a href="#2-4-http-core的server" class="headerlink" title="2.4 http_core的server"></a>2.4 http_core的server</h2><p>模块的指令定义在server段的话，是保存在哪里呢？server实例不是全局唯一的，而是可以定义多个的，所以先需要知道server实例保存在哪里，进而知道如何在server实例里保存这个模块的配置。<br>找到了,它就在ngx_http_core_main_conf_t的servers成员里。servers是个数组，保存了所有server实例。</p>
-<p>在2.3里，提到过main conf，他是每个模块的全局配置保存的地方，这里需要提一句的是：http_core模块是个内置的核心模块，它本身会有一些配置，但最重要的它维护了在本main 段的所有server实例。</p>
-<p>那么server实例本身又是一个啥呢？你很眼熟，ngx_http_conf_ctx_t，前面有它的定义。那么这个家伙在这里又怎么理解呢？</p>
+<h2 id="2-4-http-core的server"><a href="#2-4-http-core的server" class="headerlink" title="2.4 http_core的server"></a>2.4 http_core的server</h2><p>模块的指令定义在server段的话，是保存在哪里呢？server实例不是全局唯一的，而是可以定义多个的，所以先需要知道server实例保存在哪里，进而知道如何在server实例里保存这个模块的配置。<br>在2.3里提到过，每个HTTP模块通常有一个main_conf，注意有一个特殊的HTTP模块，那就是 ngx_http_core_module, 它有一个main conf，即ngx_http_core_main_conf_t。我们定义在一个<br>http{}的所有server实例ngx_http_core_srv_conf_t就保存在ngx_http_core_main_conf_t的servers成员里。</p>
+<p>留意一下ngx_http_core_srv_conf_t本身里也有一个ngx_http_conf_ctx_t，那么这个家伙在这里又怎么理解呢？</p>
 <ul>
-<li>main_conf已经无用，因为这里已经是server段了</li>
-<li>srv_conf保留了本实例里所有模块的server conf配置，以模块下标索引，类似之前的思路</li>
+<li>main_conf直接复用父实例的main_conf，因为这里已经是server段了</li>
+<li>srv_conf保留了本实例里所有http模块的server conf配置，以模块下标索引，类似之前的思路</li>
 <li>loc_conf，和前面一样，这里是server段的ctx，那么loc_conf是不是没啥用，同样是有用的。</li>
 </ul>
-<h2 id="2-5-http-core的location"><a href="#2-5-http-core的location" class="headerlink" title="2.5 http_core的location"></a>2.5 http_core的location</h2><p>和前面的思路一样，我们需要知道location实例的窝藏点。<br>server实例们保存在ngx_http_core_main_conf_t里，那么location们按理应该保存在ngx_http_core_srv_conf_t里。<br>但失望了，它们确保存在ngx_http_core_loc_conf_t里。不美，但一定有原因，我不知道是为啥。（有人知道可以mail我qzzhou$126.com）</p>
+<h2 id="2-5-http-core的location"><a href="#2-5-http-core的location" class="headerlink" title="2.5 http_core的location"></a>2.5 http_core的location</h2><p>和前面的思路一样，我们需要知道location实例的藏匿点。<br>server实例们保存在ngx_http_core_main_conf_t里，那么location们按理应该保存在ngx_http_core_srv_conf_t里。<br>但失望了，它们却保存在ngx_http_core_loc_conf_t里，主要是因为location是可以嵌套的。</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_queue_t  *locations;</span><br></pre></td></tr></table></figure>
 <p>每个locations成员的类型是ngx_http_location_queue_t,具体怎么加入locations，请查阅代码ngx_http_add_location。<br>但ngx_http_location_queue_t只是一个封装，具体有逻辑的结构还是ngx_http_core_loc_conf_t。<br>ngx_http_core_loc_conf_t里有一个loc_conf的成员，答对了，他就是保存所有模块location配置的地方。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/* pointer to the modules&apos; loc_conf */</span><br><span class="line">void        **loc_conf;</span><br></pre></td></tr></table></figure></p>
-<p>但location的实现着实不美丽啊，为啥不用ctx-&gt;loc_conf了呢，而是直接保存在ngx_http_core_loc_conf_t里呢？</p>
-<p>我擦，我好像有点明白了，这个location所在的ngx_http_core_loc_conf_t不是 core http里的conf，而是它的父亲ctx即server的loc conf。（这句话你们肯定不懂）<br>因为前面提到过在server级别的ctx里，srv_conf和loc_conf是有意义的，locations的queue是保存在server ctx的location conf里。</p>
-<h2 id="2-6-关于server和location实例的创建"><a href="#2-6-关于server和location实例的创建" class="headerlink" title="2.6 关于server和location实例的创建"></a>2.6 关于server和location实例的创建</h2><p>在遇到server{}和location{}后，会创建server实例和location实例。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">static char * ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)</span><br></pre></td></tr></table></figure>
-<p>在创建server 实例的时候，实际上就是创建一个ngx_http_core_srv_conf_t，并为其成员ctx赋值<br>ctx的main_conf和全局的main_conf相等<br>然后为每个模块创建server_conf和location_conf。这样一个ctx就完整了</p>
-<p>注意和前面呼应一下，server block里，还没有细化到location，创建了locatin_conf的用意是什么？因为毕竟location_conf要挂在一个location上嘛。</p>
-<p>然后通过ngx_array_push(&amp;cmcf-&gt;servers); 添加一个ngx_http_core_srv_conf_t。</p>
-<p>注意：我也是临时想到的，在解析文件过程中传递的一直是ngx_http_conf_ctx_t。但我们一直提到的实例是说ngx_http_core_srv_conf_t和ngx_http_core_main_conf_t这样的东西。别把解析和运行态搞混了。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">    </span><br><span class="line">static char *</span><br><span class="line">ngx_http_core_location(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)</span><br></pre></td></tr></table></figure>
-<p>这个是创建location实例，实际上是创建一个ngx_http_core_loc_conf_t，但是是封装在ngx_http_location_queue_t里。</p>
-<p>ngx_http_location_queue_t是queue的一个item，queue又挂在哪里呢？挂载这个location所在的server的core_http模块的loc_conf里<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_http_core_srv_conf_t-&gt;ctx-&gt;loc_conf[http_core_module.index].locations</span><br></pre></td></tr></table></figure></p>
-<p>因为locations只保存了一个地方，所以下面的地方就不一样了</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ngx_http_core_loc_conf_t-&gt;ctx-&gt;loc_conf[http_core_module.index].locations</span><br></pre></td></tr></table></figure>
-<p>注意两片代码的层次不一样</p>
-<h2 id="2-7-关于merge操作"><a href="#2-7-关于merge操作" class="headerlink" title="2.7 关于merge操作"></a>2.7 关于merge操作</h2><p>问题的起源是，如果一个选项比如access_log在main里和server各有配置，怎么办？模块的作者需要自己写merge函数</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">static ngx_http_module_t  ngx_http_dyssl_module_ctx = &#123;</span><br><span class="line">    NULL,                             /* preconfiguration */</span><br><span class="line">    NULL,                             /* postconfiguration */</span><br><span class="line"></span><br><span class="line">    ngx_http_dyssl_create_main_conf,  /* create main configuration */</span><br><span class="line">    ngx_http_dyssl_init_main_conf,    /* init main configuration */</span><br><span class="line"></span><br><span class="line">    NULL,                             /* create server configuration */</span><br><span class="line">    NULL,                             /* merge server configuration */</span><br><span class="line"></span><br><span class="line">    NULL,                             /* create location configuration */</span><br><span class="line">    NULL                              /* merge location configuration */</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<p>那么nginx是怎么回调用户自己的函数的呢？<br>而且互调的时候的参数类型是一样的，比如一个模块的作者定义了一条指令 xxx on/off。这个指令可以在不同范围生效。<br>对应不同段的定义如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_loc_conf_t</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_srv_conf_t;</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_main_conf_t;</span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
-<p>假设模块的作者想要的规则是使用最小范围的。location没配，则用server里的，server里没配，则用main里的。<br>当merge location的时候，传入的都是ngx_http_vdu_mapping_loc_conf_t类型的。我当时的困惑是，location里的配置当然是ngx_http_vdu_mapping_loc_conf_t类型的，但server哪里来ngx_http_vdu_mapping_loc_conf_t类型的配置。</p>
-<p>再联想一下前面说的问题，为啥创建server实例的时候，会把各个模块的location实例创建出来一个，那时候分明还有没有解析到location配置。这个家伙就用用来merge的。那问题来了，他的enable的值从哪里来呢？当然是在server段里配置 xxx on/off的时候。<br>其实前面的类型定义的代码是错误的，<br>当一个指令可以在各个范围生效的时候，需要把这个指令存储在最小的范围里，所以上面的定义应该改成：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    //</span><br><span class="line">&#125; ngx_http_xxx_loc_conf_t</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    //</span><br><span class="line">&#125; ngx_http_xxx_srv_conf_t;</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_main_conf_t;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>ngx_http_core_srv_conf_t里没有保存各个模块的srv_conf list只是保存了ctx，可以根据ctx间接找到所有模块的srv conf，为什么ngx_http_core_loc_conf_t里保存了loc_conf呢，<br>且没有ngx_http_conf_ctx_t类型的成员了呢？这个动机我还是不太清楚。<br>但这里有点需要指出的是，location是可以嵌套的。ngx_http_core_srv_conf_t的ctx的http_core模块，有个loc_conf[ngx_http_core_module.ctx_index]。<br>可以认为是这个server{}默认的location，其内的locations，记录了本server{}里的所有location。</p>
+<h2 id="2-6-关于merge操作"><a href="#2-6-关于merge操作" class="headerlink" title="2.6 关于merge操作"></a>2.6 关于merge操作</h2><p>问题的起源是，如果一个选项比如access_log在main里和server各有配置，怎么办？模块的作者需要自己写merge函数</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">static ngx_http_module_t  ngx_http_log_module_ctx = &#123;</span><br><span class="line">    NULL,                                  /* preconfiguration */</span><br><span class="line">    ngx_http_log_init,                     /* postconfiguration */</span><br><span class="line"></span><br><span class="line">    ngx_http_log_create_main_conf,         /* create main configuration */</span><br><span class="line">    NULL,                                  /* init main configuration */</span><br><span class="line"></span><br><span class="line">    NULL,                                  /* create server configuration */</span><br><span class="line">    NULL,                                  /* merge server configuration */</span><br><span class="line"></span><br><span class="line">    ngx_http_log_create_loc_conf,          /* create location configuration */</span><br><span class="line">    ngx_http_log_merge_loc_conf            /* merge location configuration */</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>那么nginx是怎么回调用户自己的函数的呢？<br>而且回掉的时候的参数类型是一样的，比如一个模块的作者定义了一条指令 xxx on/off。这个指令可以在不同范围生效。<br>对应不同段的定义如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_loc_conf_t</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_srv_conf_t;</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_main_conf_t;</span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<p>假设模块的作者想要的规则是使用最小范围的。location没配，则用server里的，server里没配，则用main里的。<br>当merge location的时候，传入的都是ngx_http_xxx_loc_conf_t类型的。我当时的困惑是，location里的配置当然是ngx_http_xxx_loc_conf_t类型的，但server哪里来ngx_http_xxx_loc_conf_t类型的配置。</p>
+<p>再联想一下前面说的问题，为啥创建server实例的时候，会把各个模块的location实例创建出来一个，那时候分明还有没有解析到location配置。这个家伙就是用来merge的。那问题来了，他的enable的值从哪里来呢？当然是在server段里配置 xxx on/off的时候。<br>其实前面的类型定义的代码是错误的，<br>当一个指令可以在各个范围生效的时候，需要把这个指令存储在最小的范围里，所以上面的定义应该改成：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_loc_conf_t</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    //</span><br><span class="line">&#125; ngx_http_xxx_srv_conf_t;</span><br><span class="line"></span><br><span class="line">typedef struct &#123;</span><br><span class="line">    ngx_flag_t                           enable;</span><br><span class="line">&#125; ngx_http_xxx_main_conf_t;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <p>然后定义commands的时候<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    ngx_string(&quot;xxx&quot;),</span><br><span class="line">    NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONFNGX_CONF_FLAG,</span><br><span class="line">    ngx_conf_set_flag_slot,</span><br><span class="line">    NGX_HTTP_LOC_CONF_OFFSET,</span><br><span class="line">    offsetof(ngx_http_xxx_loc_conf_t, enable),</span><br><span class="line">    NULL</span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure></p>
 <p>NGX_HTTP_LOC_CONF_OFFSET是告诉nginx，放到ctx的那个conf里，还记得ctx的定义么？<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    void        **main_conf;</span><br><span class="line">    void        **srv_conf;</span><br><span class="line">    void        **loc_conf;</span><br><span class="line">&#125; ngx_http_conf_ctx_t;</span><br></pre></td></tr></table></figure></p>
 <p>然后offset那一行，告诉存储在那个变量里</p>
-<p>最后关键来了，怎么merge呢？对于一个模块来说，就是用main实例里的srv_conf和server实例离的srv_conf merge，然后用server实例里的loc_conf和location实例离的loc_conf merge。</p>
-<p>注意merge的时候是会改变配置的哦。</p>
+<p>最后关键来了，怎么merge呢？<br>答：对于一个模块来说，就是用main实例里的srv_conf和server实例里的srv_conf merge，然后用server实例里的loc_conf和location实例里的loc_conf merge。<br>注意merge的时候是会改变配置的哦。</p>
+<h2 id="2-7-对于一个request，如何找对应的模块的配置"><a href="#2-7-对于一个request，如何找对应的模块的配置" class="headerlink" title="2.7 对于一个request，如何找对应的模块的配置"></a>2.7 对于一个request，如何找对应的模块的配置</h2><p>最后看一下运行态，对于一个请求来讲需要找到对应的srv和loc配置，才能处理起来<br>即ngx_http_get_module_ctx是如何生效的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">#define ngx_http_get_module_main_conf(r, module)                             \</span><br><span class="line">    (r)-&gt;main_conf[module.ctx_index]</span><br><span class="line">#define ngx_http_get_module_srv_conf(r, module)  (r)-&gt;srv_conf[module.ctx_index]</span><br><span class="line">#define ngx_http_get_module_loc_conf(r, module)  (r)-&gt;loc_conf[module.ctx_index]</span><br></pre></td></tr></table></figure>
+<p>所以就是看看我们的r是如何赋值 main_conf/svc_conf/loc_conf的</p>
+<p>我原来以为看如何找main_conf是最容易的，但感觉有点复杂。<br>ngx_http_init_connection函数里，<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/* the default server configuration for the address:port */</span><br><span class="line">hc-&gt;conf_ctx = hc-&gt;addr_conf-&gt;default_server-&gt;ctx;</span><br></pre></td></tr></table></figure></p>
+<p>但default_server-&gt;ctx尚不知如何赋值的。不过不管哪个server他们的main_conf都是一样的，知识srv_conf不一样而已。</p>
+<p>然后再ngx_http_create_request里，就用了上面找到的ctx去找main_conf。<br>其他的两个容易看到 ngx_http_find_virtual_server，帮我们找到ngx_http_core_srv_conf_t配置。<br>ngx_http_core_find_location帮助我们找到对应的location，即为r-&gt;loc_conf赋值，有了这个之后，就可以找到这个location下的所有其他模块的配置</p>
 <p>好了，分析结束，上一个大图。</p>
 <p><img src="nginx_conf.jpg" alt=""></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/05/10/nginx的配置管理/" data-id="cjq7z957i000r7hlomv923uer" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/05/10/nginx的配置管理/" data-id="cjukliqai000lm9lo7qrnv058" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
@@ -279,7 +361,7 @@
   
   <div class="outer">
     <div id="footer-info" class="inner">
-      &copy; 2018 abonege<br>
+      &copy; 2019 abonege<br>
       Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
