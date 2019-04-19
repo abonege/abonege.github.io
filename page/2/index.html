@@ -62,6 +62,127 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-openssl签发证书" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/05/05/openssl签发证书/" class="article-date">
+  <time datetime="2017-05-05T09:05:30.000Z" itemprop="datePublished">2017-05-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2017/05/05/openssl签发证书/">openssl签发证书</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="1-介绍"><a href="#1-介绍" class="headerlink" title="1.介绍"></a>1.介绍</h1><p>为了搭建https的测试环境，还是别用自己的正式证书了，想自己当把CA，颁发一些证书，自己当根。网上看了一些文章，都是当前目录建立一个demoCA这样的东西，但使用openssl ca 命令的时候，总是各种访问默认目录/etc/pki什么的，所以hi是放弃幻想了。直接用系统的目录做事情吧。</p>
+<p>先看一下这个目录的结构吧</p>
+<pre>
+    [root@cq01-bce-48-29-31.cq01.baidu.com httpsec]# tree /etc/pki/CA
+        /etc/pki/CA
+        |-- certs
+        |-- crl
+        |-- newcerts
+        `-- private
+    4 directories, 0 files
+</pre>
+
+
+<h1 id="2-步骤"><a href="#2-步骤" class="headerlink" title="2.步骤"></a>2.步骤</h1><h2 id="2-1-生成私钥"><a href="#2-1-生成私钥" class="headerlink" title="2.1.生成私钥"></a>2.1.生成私钥</h2><p>进入CA目录，生成我们的一个私钥：</p>
+<pre>
+    cd /etc/pki/CA
+    openssl genrsa -out private/cakey.pem 2048
+</pre>
+
+<p>大家可能问，公钥跑哪里去了，实际上生成的私钥里既有私钥，也有一些基础信息，用于将来生成公钥</p>
+<pre>
+    RSAPrivateKey ::= SEQUENCE {
+        version Version,
+        modulus INTEGER, -- n
+        publicExponent INTEGER, -- e
+        privateExponent INTEGER, -- d
+        prime1 INTEGER, -- p
+        prime2 INTEGER, -- q
+        exponent1 INTEGER, -- d mod (p-1)
+        exponent2 INTEGER, -- d mod (q-1)
+        coefficient INTEGER, -- (inverse of q) mod p
+        otherPrimeInfos OtherPrimeInfos OPTIONAL
+    }
+
+    RSAPublicKey ::= SEQUENCE {
+        modulus INTEGER, -- n
+        publicExponent INTEGER -- e
+    }
+</pre>
+
+
+<h2 id="2-2-生成根证书"><a href="#2-2-生成根证书" class="headerlink" title="2.2.生成根证书"></a>2.2.生成根证书</h2><p>生成根证书有两种方式，一种是直接生成字签名根证书，一种是先生成根证书的请求文件csr，然后自己跟自己颁根证书</p>
+<p>方法一</p>
+<pre>
+    openssl req -new -days 3650 -x509 -key ./private/cakey.pem -out  cacert.pem
+</pre>
+
+
+<p>方法二</p>
+<pre>
+    openssl req -new -key ./private/cakey.pem -out  rootca.csr
+    openssl req -x509 -days 3650 -key ./private/cakey.pem -in rootca.csr -out cacert.pem
+</pre>
+
+<p>我们可以看下证书的内容</p>
+<pre>
+     openssl x509 -in rootca.crt -noout -text
+</pre>
+
+
+
+<h2 id="2-4-给别人签发证书"><a href="#2-4-给别人签发证书" class="headerlink" title="2.4.给别人签发证书"></a>2.4.给别人签发证书</h2><p>自己当了CA后，就可以给别人签发证书了。客户自己生成一个证书请求，给CA，CA就可以生成证书了</p>
+<p>在客户机执行如下操作</p>
+<pre>
+    1.生成私钥
+    openssl genrsa -out client1_key.pem 2048
+    openssl  req -new -key  client1_key.pem  -out client1.csr
+</pre>
+
+<p>最后就是关键的 一步，签发证书,表示CA对证书申请者的认同。</p>
+<pre>
+    openssl ca -in client1.csr -out client1.pem
+</pre>
+
+<p>中间可能会提示index.txt文件和serial文件，按他的要求有这个两个文件即可，也可以一开始的时候就初始化好</p>
+<pre>
+    touch /etc/pki/CA/index.txt
+    echo xyz > /etc/pki/CA/serial
+</pre>
+
+<p>好了，搞定！</p>
+<p>期间需要注意的是，root CA的证书申请时候的Country,State,Comm那几个字段要一致，否则签发不了证书。可以自己试试。</p>
+<p>补一个，证书导出公钥</p>
+<pre>
+openssl x509 -inform PEM -in client1.pem -outform PEM -pubkey -noout
+</pre>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2017/05/05/openssl签发证书/" data-id="cjuntxqxx000rghlofxgj3ie9" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-socket编程的内核实现" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2017/05/04/socket编程的内核实现/" class="article-date">
@@ -143,7 +264,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/05/04/socket编程的内核实现/" data-id="cjukliqaq000wm9lo94uqu9th" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/05/04/socket编程的内核实现/" data-id="cjuntxqy0000wghloy21ae4pe" class="article-share-link">Share</a>
       
       
     </footer>
@@ -212,9 +333,11 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/05/04/nginx与reuseport/" data-id="cjukliqao000um9lo9ehg7wnj" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/05/04/nginx与reuseport/" data-id="cjuntxqxw000pghlotv8z1q00" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/reuseport/">reuseport</a></li></ul>
+
     </footer>
   </div>
   
@@ -248,7 +371,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2017/01/20/RSA加密/" data-id="cjukliq9y0001m9lok0emxdvd" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2017/01/20/RSA加密/" data-id="cjuntxqww0004ghlolcjjoy7c" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/openssl/">openssl</a></li></ul>
@@ -345,7 +468,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/10/09/nginx进程架构/" data-id="cjukliqat0012m9lobrw5oaw7" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/10/09/nginx进程架构/" data-id="cjuntxqxz000tghloj1r22cez" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
@@ -388,7 +511,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/08/21/关于代码优化/" data-id="cjukliqar000ym9lovpctwfta" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/08/21/关于代码优化/" data-id="cjuntxqy1000yghlo77yqqcmr" class="article-share-link">Share</a>
       
       
     </footer>
@@ -444,7 +567,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/06/30/neutron资源添加属性/" data-id="cjukliqab000dm9lo0x8an4uk" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/06/30/neutron资源添加属性/" data-id="cjuntxqxn000fghlopv21isjx" class="article-share-link">Share</a>
       
       
     </footer>
@@ -497,7 +620,7 @@ for agent in enabled_agents:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/06/27/创建资源后如何通知agent/" data-id="cjukliqaw0018m9loxw66q165" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/06/27/创建资源后如何通知agent/" data-id="cjuntxqy40014ghlo8x5qpb3b" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
@@ -536,7 +659,7 @@ for agent in enabled_agents:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/06/24/emacs显示行尾空格/" data-id="cjukliqaa000bm9lotk7ouwxe" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/06/24/emacs显示行尾空格/" data-id="cjuntxqxe000aghlobfmfooij" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/emacs/">emacs</a></li></ul>
@@ -649,52 +772,9 @@ return interface_name
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/06/08/删除子网的时候DHCP的变化/" data-id="cjukliqax0019m9loxx9hef5m" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/06/08/删除子网的时候DHCP的变化/" data-id="cjuntxqy80019ghlo0uh1t6zb" class="article-share-link">Share</a>
       
       
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-Neutron中的流表" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2016/06/01/Neutron中的流表/" class="article-date">
-  <time datetime="2016-06-01T06:17:13.000Z" itemprop="datePublished">2016-06-01</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/06/01/Neutron中的流表/">Neutron中的流表</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="br-int-br-tun"><a href="#br-int-br-tun" class="headerlink" title="br-int, br-tun"></a>br-int, br-tun</h2><p>br-int是一个ovs桥，不是linux bridge，这个ovs桥把本计算节点上的所有vm的port连接上，那怎么才能让这些不同租户的port不互相干扰呢，就是用vlan，每个租户分配不同的vlan tag。</p>
-<p>br-tun是用于东西流量的，比如一个租户的计算节点1上的虚拟机，为了和计算节点2上的虚拟机通讯，两者之间就会建一个tunnel。<br>那么一个计算借点会有多少个tunnel呢？就是看这个节点上的虚机和多少个计算节点上的续集有联系，最差的情况就是：如果有N计算几点，就有N-1个tunnel（网络节点另算）</p>
-<h2 id="neutron里的flow-table"><a href="#neutron里的flow-table" class="headerlink" title="neutron里的flow table"></a>neutron里的flow table</h2><p>为了使逻辑更加清晰，在neutron中，flow table使用了多个table来分别控制不同的flow<br><figure class="highlight plain"><figcaption><span>[neutron/plugins/ml2/drivers/openvswitch/agent/common/constants.py]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">PATCH_LV_TO_TUN = 1</span><br><span class="line">GRE_TUN_TO_LV = 2</span><br><span class="line">VXLAN_TUN_TO_LV = 3</span><br><span class="line">LEARN_FROM_TUN = 10</span><br><span class="line">UCAST_TO_TUN = 20</span><br><span class="line">FLOOD_TO_TUN = 21</span><br><span class="line">ARP_RESPONDER = 22</span><br><span class="line"></span><br><span class="line">CANARY_TABLE = 128</span><br></pre></td></tr></table></figure></p>
-<p>当一个port创建的时候，会在context里设置<strong>init_flag = True.</strong><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">if context.init_flag:</span><br><span class="line">    need_notify_agent_port_at = True</span><br><span class="line">    need_pop_flooding_entry = True</span><br></pre></td></tr></table></figure></p>
-<p>设置了need_pop_flooding_entry的用途是啥呢？<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># Notify other agents to add fdb rule for current port</span><br><span class="line">if need_pop_flooding_entry:</span><br><span class="line">    # And notify other agents to add flooding entry</span><br><span class="line">    other_fdb_entries[network_id][&apos;ports&apos;][agent_ip].append(</span><br><span class="line">        const.FLOODING_ENTRY)</span><br></pre></td></tr></table></figure><br>这样就会向该网络的所有port所在的ovs-agent广播一下，广播的结果是，在这些ovs-agent所在的机器上，加入一条flow table，<br>当这个netwwrk有广播包的时候，给我一份，比如响应arp啥的。</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/06/01/Neutron中的流表/" data-id="cjukliq9u0000m9loe0zxcte7" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
-
     </footer>
   </div>
   
@@ -727,7 +807,7 @@ return interface_name
   <div class="widget-wrap">
     <h3 class="widget-title">标签</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/CC防护，nginx，封禁/">CC防护，nginx，封禁</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSA加密/">RSA加密</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RegEx/">RegEx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SSL/">SSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/emacs/">emacs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hexo使用/">hexo使用</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan/">hyperscan</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/hyperscan编译/">hyperscan编译</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/intel/">intel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/neutron/">neutron</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/nginx/">nginx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openssl/">openssl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ovs/">ovs</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/resolve/">resolve</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/reuseport/">reuseport</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/server/">server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/upstream/">upstream</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/字节序/">字节序</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/安全组/">安全组</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/游记/">游记</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/网络字节序，主机字节序/">网络字节序，主机字节序</a></li></ul>
     </div>
   </div>
 
@@ -737,7 +817,7 @@ return interface_name
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+      <a href="/tags/CC防护，nginx，封禁/" style="font-size: 10px;">CC防护，nginx，封禁</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/reuseport/" style="font-size: 10px;">reuseport</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
     </div>
   </div>
 
@@ -746,7 +826,7 @@ return interface_name
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/04/">四月 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">十一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">一月 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/10/">十月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">八月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">六月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">五月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">四月 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">三月 2016</a></li></ul>
     </div>
   </div>
 
@@ -757,6 +837,10 @@ return interface_name
     <h3 class="widget-title">最新文章</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2019/04/19/一起理解nginx的监听流程/">一起理解nginx的监听流程</a>
+          </li>
         
           <li>
             <a href="/2018/04/26/理解字节序/">理解字节序</a>
@@ -772,10 +856,6 @@ return interface_name
         
           <li>
             <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
-          </li>
-        
-          <li>
-            <a href="/2017/12/15/nginx实现动态resolve的思路/">nginx实现动态resolve的思路</a>
           </li>
         
       </ul>
