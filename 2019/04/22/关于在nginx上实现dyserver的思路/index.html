@@ -5,15 +5,20 @@
   
 
   
-  <title>Tag: openssl | 秋月春风等闲度,暮去朝来颜色故</title>
+  <title>关于在nginx上实现dyserver的思路 | 秋月春风等闲度,暮去朝来颜色故</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="秋月春风等闲度,暮去朝来颜色故">
-<meta property="og:url" content="http://abonege.github.io/tags/openssl/index.html">
+  <meta name="description" content="engine上实现了dyups，来实现对upstream的动态load，即在不重启nginx的情况下，完成对upstream的动态加载。我们今天讨论的问题有些类似，那就是如何实现动态server的加载，即让一段一段的server{}热生效。 我们先梳理一下目前静态server{}的加载流程，它是在ngx_init_cycle里完成的  解析配置文件nginx.conf。解析的过程中会创建若干个ng">
+<meta name="keywords" content="nginx">
+<meta property="og:type" content="article">
+<meta property="og:title" content="关于在nginx上实现dyserver的思路">
+<meta property="og:url" content="http://abonege.github.io/2019/04/22/关于在nginx上实现dyserver的思路/index.html">
 <meta property="og:site_name" content="秋月春风等闲度,暮去朝来颜色故">
+<meta property="og:description" content="engine上实现了dyups，来实现对upstream的动态load，即在不重启nginx的情况下，完成对upstream的动态加载。我们今天讨论的问题有些类似，那就是如何实现动态server的加载，即让一段一段的server{}热生效。 我们先梳理一下目前静态server{}的加载流程，它是在ngx_init_cycle里完成的  解析配置文件nginx.conf。解析的过程中会创建若干个ng">
 <meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-04-22T04:10:37.043Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="秋月春风等闲度,暮去朝来颜色故">
+<meta name="twitter:title" content="关于在nginx上实现dyserver的思路">
+<meta name="twitter:description" content="engine上实现了dyups，来实现对upstream的动态load，即在不重启nginx的情况下，完成对upstream的动态加载。我们今天讨论的问题有些类似，那就是如何实现动态server的加载，即让一段一段的server{}热生效。 我们先梳理一下目前静态server{}的加载流程，它是在ngx_init_cycle里完成的  解析配置文件nginx.conf。解析的过程中会创建若干个ng">
   
     <link rel="alternate" href="/atom.xml" title="秋月春风等闲度,暮去朝来颜色故" type="application/atom+xml">
   
@@ -60,40 +65,67 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2017" class="archive-year">2017</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-ssl">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2017/01/20/RSA加密/" class="archive-article-date">
-  <time datetime="2017-01-20T08:31:21.000Z" itemprop="datePublished">1月 20</time>
+        <section id="main"><article id="post-关于在nginx上实现dyserver的思路" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2019/04/22/关于在nginx上实现dyserver的思路/" class="article-date">
+  <time datetime="2019-04-22T03:41:32.000Z" itemprop="datePublished">2019-04-22</time>
 </a>
-      
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2017/01/20/RSA加密/">RSA加密</a>
+    <h1 class="article-title" itemprop="name">
+      关于在nginx上实现dyserver的思路
     </h1>
   
 
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>engine上实现了dyups，来实现对upstream的动态load，即在不重启nginx的情况下，完成对upstream的动态加载。<br>我们今天讨论的问题有些类似，那就是如何实现动态server的加载，即让一段一段的server{}热生效。</p>
+<p>我们先梳理一下目前静态server{}的加载流程，它是在ngx_init_cycle里完成的</p>
+<ul>
+<li>解析配置文件nginx.conf。解析的过程中会创建若干个ngx_http_srv_conf_conf_t对象（一个server对应一个）。对应的，每个http模块也会做相应的初始化，其context有时是srv，有时时loc。</li>
+<li>为所有模块创建共享内存，在各个模块的create_main_conf回掉里会指定创建的大小，标志等等</li>
+<li>创建好共享内存候回掉各个模块，说共享内存创建好了，as you wish，请使用</li>
+<li>删除旧的listening，可以这次不开始443端口了</li>
+<li>开始监听listening socket</li>
+</ul>
+<p>大致就是上面的过程。<br>如果我们使用dyups的思路搞这个事情的话。比如每个worker可以加载一段server{}代码到自己的cycle中</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    server &#123;</span><br><span class="line">    listen 80 default_server;</span><br><span class="line">    server_name _; # This is just an invalid value which will never trigger on a real hostname.</span><br><span class="line">    access_log logs/default.access.log main;</span><br><span class="line">    server_name_in_redirect off;</span><br><span class="line">    root  /var/www/default/htdocs;</span><br><span class="line">    test_module_cmd on;   // 一个新模块test_module，需要使用共享内存</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>加载这样的配置块，如果想生效，需要执行哪些步骤呢？共享内存和开启监听</p>
+<p>第一步，肯定需要解析配置，创建ngx_http_srv_conf_conf_t，以及解析其内配置的各个模块命令<br>第二步，准备共享内存，通常是不需要的，因为共享内存都是在create_main_conf里创建，以及在shm等回掉里初始化，在当前的时机里，shm肯定初始化过了，shm和server{}无关，只和模块的main conf即http{}有关<br>第三步，开启监听以及相关事宜</p>
+<p>第三步内容很复杂，可以考虑我的 nginx的配置管理 一文。但这部分对于某些方案来说，还是略有便利的。比如lvs + nginx这种架构。nginx上的监听，不是普普通通的监听，它是监听了一个大众socket，比如80，<br>所有的用户都使用这个80port，那如何区分从lvs的那个vs过来的流量呢？答案就是通过tcp option。<br>所以对于这样的case 第三步只是维护了一个虚假的监听，用户匹配从tcp option上拿到vs的信息即可。</p>
 
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2019/04/22/关于在nginx上实现dyserver的思路/" data-id="cjuruem2i000w2glonuuzwtoy" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/nginx/">nginx</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2019/04/19/一起理解nginx的监听流程/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">一起理解nginx的监听流程</div>
+    </a>
+  
+</nav>
+
+  
+</article>
 
 </section>
         

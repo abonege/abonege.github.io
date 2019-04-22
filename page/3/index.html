@@ -62,6 +62,117 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-删除子网的时候DHCP的变化" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/06/08/删除子网的时候DHCP的变化/" class="article-date">
+  <time datetime="2016-06-08T03:32:27.000Z" itemprop="datePublished">2016-06-08</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/06/08/删除子网的时候DHCP的变化/">删除子网的时候DHCP的变化</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>我们通常知道的答案是当删除子网的时候会会回调dhcp-agent的<code>subnet_delete_end</code>函数。然后调用driver的<code>restart</code>来重新加载dnsmasq进程，但今天我想说一点细节的东西。</p>
+<p>##细节一：什么时候把一个网络分发到一个agent上去，</p>
+<p>当第一个DHCP port创建后，会做2个件事情</p>
+<ul>
+<li>为这个network schedule到一个agent上去</li>
+<li>给所有个agent发送消息比如port_create_end</li>
+</ul>
+<p>所以一个有意思的流程是，当一个subnet创建后，并不一定会通知dhcp_agent，因为要考虑这时候dhcp-port有没有创建，如果没有创建的话，说明连dhcp-agent也没有呢，自然不需要notify<br>那么什么时候创建dhcp-port呢？当一个subnet通过router-interface-add添加一个port的时候，就会触发dhcp-port的创建。然后schedule agent，<br>然后后续的subnet都会通知这些dhcp agents了</p>
+<p>&lt;% codeblock %&gt;<br>    def add_router_interface(self, context, router_id, interface_info):<br>        add_by_port, add_by_sub = self._validate_interface_info(interface_info)<br>        device_owner = self._get_device_owner(context, router_id)</p>
+<pre><code>if add_by_port:
+    port = self._add_interface_by_port(
+        context, router_id, interface_info[&apos;port_id&apos;], device_owner)
+elif add_by_sub:
+    port = self._add_interface_by_subnet(
+        context, router_id, interface_info[&apos;subnet_id&apos;], device_owner)
+    super(L3_NAT_db_mixin, self).send_dhcp_notification(
+        context, {&apos;port&apos;: port}, &apos;port.create.end&apos;) 
+</code></pre><p>&lt;% endcodeblock %&gt;</p>
+<p>所以会发送一个创建port的指令，然后会schedule一个agent来负责这个network，然后agent会做如下操作：</p>
+<ul>
+<li>拉subnet数据到agent</li>
+<li>创建dhcp_port（实际上是从neutron server获得分配给本dhcp port的信息，比如ip mac啥的，实际还是在本地创建）</li>
+</ul>
+<p>之后再创建subnet就会notify 这个agent了。</p>
+<p>##细节二：DHCP Port上的IP什么时候删除的</p>
+<p>当port/subnet有更新的时候，会走restart流程，然后</p>
+<ul>
+<li>拉新的network数据</li>
+<li><p>重建dhcp_port，一般调用update_dhcp_port，然后重新设置ip网关之类的<br>&lt;% codeblock %&gt;<br>  def setup(self, network, reuse_existing=False):</p>
+<pre><code>&quot;&quot;&quot;Create and initialize a device for network&apos;s DHCP on this host.&quot;&quot;&quot;
+port = self.setup_dhcp_port(network)
+interface_name = self.get_interface_name(network, port)
+
+if ip_lib.device_exists(interface_name,
+                        self.root_helper,
+                        network.namespace):
+    if not reuse_existing:
+        raise exceptions.PreexistingDeviceFailure(
+            dev_name=interface_name)
+
+    LOG.debug(_(&apos;Reusing existing device: %s.&apos;), interface_name)
+else:
+    self.driver.plug(network.id,
+                     port.id,
+                     interface_name,
+                     port.mac_address,
+                     namespace=network.namespace)
+
+ip_cidrs = []
+for fixed_ip in port.fixed_ips:
+    subnet = fixed_ip.subnet
+    net = netaddr.IPNetwork(subnet.cidr)
+    ip_cidr = &apos;%s/%s&apos; % (fixed_ip.ip_address, net.prefixlen)
+    ip_cidrs.append(ip_cidr)
+
+if (self.conf.enable_isolated_metadata and
+    self.conf.use_namespaces):
+    ip_cidrs.append(METADATA_DEFAULT_CIDR)
+
+self.driver.init_l3(interface_name, ip_cidrs,
+                    namespace=network.namespace)
+
+# ensure that the dhcp interface is first in the list
+if network.namespace is None:
+    device = ip_lib.IPDevice(interface_name,
+                             self.root_helper)
+    device.route.pullup_route(interface_name)
+
+if self.conf.use_namespaces:
+    self._set_default_route(network, port=port)
+return interface_name
+</code></pre></li>
+</ul>
+<p>&lt;% endcodeblock %&gt;</p>
+<p>##细节二：在Neutron Server上，那个子网的IP什么时候删除的</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://abonege.github.io/2016/06/08/删除子网的时候DHCP的变化/" data-id="cjuruem3f00192gloy1blcixe" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-Neutron中的流表" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2016/06/01/Neutron中的流表/" class="article-date">
@@ -93,7 +204,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/06/01/Neutron中的流表/" data-id="cjunudng80000vwlooecbxa6d" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/06/01/Neutron中的流表/" data-id="cjuruem1o00002glog7229p6k" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/flow-table/">flow-table</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
@@ -141,7 +252,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/05/31/创建虚机Port流程/" data-id="cjunudnh50017vwlo9m2su54e" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/05/31/创建虚机Port流程/" data-id="cjuruem3500162glomea47bed" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/openvswitch/">openvswitch</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/ovs/">ovs</a></li></ul>
@@ -191,7 +302,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/05/26/Neutron之安全组代码分析/" data-id="cjunudngg0004vwloginw5z32" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/05/26/Neutron之安全组代码分析/" data-id="cjuruem1v00032gloqfq215zr" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/安全组/">安全组</a></li></ul>
@@ -281,7 +392,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/05/25/普吉岛游记/" data-id="cjunudnha001gvwlogfe5mh8k" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/05/25/普吉岛游记/" data-id="cjuruem3m001h2gloywk1ux6m" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/游记/">游记</a></li></ul>
@@ -326,7 +437,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/05/25/如何在hexo使用图片/" data-id="cjunudnh60018vwlofwkbxw4n" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/05/25/如何在hexo使用图片/" data-id="cjuruem3k001d2gloylpk0j5y" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/hexo使用/">hexo使用</a></li></ul>
@@ -405,7 +516,7 @@ DhcpAgentWithStateReport是DHCPAgent的实现类，里面有callback函数，比
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/05/18/Neutron组件的RPC通讯/" data-id="cjunudngb0001vwloqqdyujip" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/05/18/Neutron组件的RPC通讯/" data-id="cjuruem1s00012gloqj55xmt4" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
@@ -449,7 +560,7 @@ DhcpAgentWithStateReport是DHCPAgent的实现类，里面有callback函数，比
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/05/05/在neutron数据库增加一个列/" data-id="cjunudnh7001avwlobtblqat0" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/05/05/在neutron数据库增加一个列/" data-id="cjuruem3j001b2glo6uth7k0z" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/neutron/">neutron</a></li></ul>
@@ -488,7 +599,7 @@ DhcpAgentWithStateReport是DHCPAgent的实现类，里面有callback函数，比
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/04/06/haproxy-code-analyze/" data-id="cjunudngj0008vwlowdvk5zzk" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/04/06/haproxy-code-analyze/" data-id="cjuruem24000c2glo17r1qr3e" class="article-share-link">Share</a>
       
       
     </footer>
@@ -550,7 +661,7 @@ s.setAttribute('data-timestamp', +new Date());
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://abonege.github.io/2016/03/25/nginx_vs_tengine/" data-id="cjunudngq000hvwlodbpbgyii" class="article-share-link">Share</a>
+      <a data-url="http://abonege.github.io/2016/03/25/nginx_vs_tengine/" data-id="cjuruem28000h2glohxmlw6t7" class="article-share-link">Share</a>
       
       
     </footer>
@@ -595,7 +706,7 @@ s.setAttribute('data-timestamp', +new Date());
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/CC防护/" style="font-size: 10px;">CC防护</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 20px;">neutron</a> <a href="/tags/nginx/" style="font-size: 20px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/reuseport/" style="font-size: 10px;">reuseport</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/封禁/" style="font-size: 10px;">封禁</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
+      <a href="/tags/CC防护/" style="font-size: 10px;">CC防护</a> <a href="/tags/RSA加密/" style="font-size: 10px;">RSA加密</a> <a href="/tags/RegEx/" style="font-size: 10px;">RegEx</a> <a href="/tags/SSL/" style="font-size: 10px;">SSL</a> <a href="/tags/emacs/" style="font-size: 10px;">emacs</a> <a href="/tags/flow-table/" style="font-size: 10px;">flow-table</a> <a href="/tags/hexo使用/" style="font-size: 10px;">hexo使用</a> <a href="/tags/hyperscan/" style="font-size: 10px;">hyperscan</a> <a href="/tags/hyperscan编译/" style="font-size: 10px;">hyperscan编译</a> <a href="/tags/intel/" style="font-size: 10px;">intel</a> <a href="/tags/neutron/" style="font-size: 15px;">neutron</a> <a href="/tags/nginx/" style="font-size: 20px;">nginx</a> <a href="/tags/openssl/" style="font-size: 10px;">openssl</a> <a href="/tags/openvswitch/" style="font-size: 10px;">openvswitch</a> <a href="/tags/ovs/" style="font-size: 10px;">ovs</a> <a href="/tags/resolve/" style="font-size: 10px;">resolve</a> <a href="/tags/reuseport/" style="font-size: 10px;">reuseport</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/upstream/" style="font-size: 10px;">upstream</a> <a href="/tags/字节序/" style="font-size: 10px;">字节序</a> <a href="/tags/安全组/" style="font-size: 10px;">安全组</a> <a href="/tags/封禁/" style="font-size: 10px;">封禁</a> <a href="/tags/游记/" style="font-size: 10px;">游记</a> <a href="/tags/网络字节序，主机字节序/" style="font-size: 10px;">网络字节序，主机字节序</a>
     </div>
   </div>
 
@@ -617,6 +728,10 @@ s.setAttribute('data-timestamp', +new Date());
       <ul>
         
           <li>
+            <a href="/2019/04/22/关于在nginx上实现dyserver的思路/">关于在nginx上实现dyserver的思路</a>
+          </li>
+        
+          <li>
             <a href="/2019/04/19/一起理解nginx的监听流程/">一起理解nginx的监听流程</a>
           </li>
         
@@ -630,10 +745,6 @@ s.setAttribute('data-timestamp', +new Date());
         
           <li>
             <a href="/2018/01/31/RSA算法证明/">RSA算法证明</a>
-          </li>
-        
-          <li>
-            <a href="/2018/01/05/SSL基础知识总结/">SSL基础知识总结</a>
           </li>
         
       </ul>
